@@ -15,16 +15,16 @@
 \begin{document}
 \maketitle
 \section{Background and Motivation}
-Dialogue systems (e.g. Chat-bots) have made great progress during the last years. Mainly because of the invention of novel neural models ans machine learning techniques. Because of the progress many current research aims to improve the dialogue systems on a individual and human-like level. Recent article \cite[]{DBLP:journals/corr/abs-1901-08149, liu2020impress} tried to tackle this problem by feeding a persona into the network. The network is then trained to extract characteristic information from the given persona in order to generate a human-like output sequence. The persona is defined by a set of profile sentences like \textit{I like books}. The challenge with these approaches consist of two problems
+Dialogue systems (e.g. Chat-bots) have made great progress during the last years. Mainly because of the invention of novel neural models and machine learning techniques. Because of the progress, many current research aim to improve the dialogue systems on an individual and human-like level. Recent articles \cite[]{DBLP:journals/corr/abs-1901-08149, liu2020impress} tried to tackle this problem by feeding a persona into the network. The network is then trained to extract characteristic information from the given persona in order to generate a human-like output sequence. The persona is defined by a set of profile sentences like \textit{I like books}. The problem of these approaches consist of two tasks:
 \begin{itemize}
 \item \textbf{Persona understanding:}\\
-The network needs to understand what the characteristics of the given persona. This also yields the question on what defines a certain persona and on how formulate the profile sentences, since the Persona definition has to be done manually. 
+The network needs to understand what the characteristics of the given persona are. This also yields the question on what defines a certain persona and on how to formulate the profile sentences, since the Persona definition has to be done manually. 
 \item \textbf{Style derivation:}\\
 The network needs to derive a certain speaking/writing style from the given persona. Profile sentences like \textit{I bought my first home} \cite[]{liu2020impress} do not necessarily contribute to a distinct writing style.
 \end{itemize}
-Humans can use various ways of expressing them self, thus it is questionable if the expression style can be defined by just a few sentences. 
+Humans can use various ways of expressing themselves, thus it is questionable if the expression style can be defined by just a few sentences. 
 
-An example generation of a such a model\footnote{\url{https://github.com/SivilTaram/Persona-Dialogue-Generation}} can be seen in Figure \ref{dialogue}. One can observe that the model is not trying to generate text in a certain style but rather generating sentences that contain the information given by the Persona. 
+An example generation of such a model\footnote{\url{https://github.com/SivilTaram/Persona-Dialogue-Generation}} can be seen in Figure \ref{dialogue}. One can observe that the model is not trying to generate text in a certain style but rather generating sentences that contain the information given by the persona. 
 
 \begin{figure}[h]
 \label{dialogue}
@@ -49,14 +49,14 @@ Bot & She died when I was 18, so I moved to Russia. Do you have any pets?
 \end{figure}
 
 \section{Research Question}
-Given the previously stated problems one might suggest to rather focus on a single persona and in order to derive a more complex style of writing/speaking. It might also be beneficial to extract the style in a more abstract representation than a persona definition. One possible way of modifying the generation style is pre-training on a biased dataset that contains human generated sequences. \cite[]{wullach2020hate} applied this approach successfully by fine-tuning the the GPT-2 model \cite[]{Radford2019LanguageMA} on a hateful data set in order to modify the generative style without loosing the rich language model encoded in GPT-2. This approach could be used for a dialogue system as well. 
+Given the previously stated problems one might suggest to rather focus on a single persona in order to derive a more complex style of writing/speaking. It might also be beneficial to extract the style in a more abstract representation than a persona definition. One possible way of modifying the generation style is pre-training on a biased dataset that contains human generated sequences. \cite[]{wullach2020hate} applied this approach successfully by fine-tuning the the GPT-2 model \cite[]{Radford2019LanguageMA} on a hateful data set in order to modify the generative style without loosing the rich language model encoded in GPT-2. This approach could be used for a dialogue system as well. 
 
 Therefore, the research question of my work is whether additional training on a biased dataset can be used to encode a human-like generative style in a neural network.
 My work will include the following tasks:
 \begin{itemize}
 \item Find a suitable  goal-oriented baseline model that can be used for additional training. The model must fit the limited google colab resources. Further, the baseline model should be usable for a recommendation system due to the research background of my advisor.
 \item Find suitable biased datasets for different persona that can be used for training.
-\item Examine different variance of the additional training e.g. \textit{pre-training}, \textit{post-training} or an \textit{interleaved} training procedure. The overall training time must not exceed an acceptable threshold due to the limited training resources.
+\item Examine different variances of the additional training e.g. \textit{pre-training}, \textit{post-training} or an \textit{interleaved} training procedure. The overall training time must not exceed an acceptable threshold due to the limited training resources.
 \end{itemize}
 \section{Time-line}
 \begin{figure}[h]
