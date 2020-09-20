@@ -10,6 +10,7 @@
 \setcitestyle{authoryear,open={(},close={)}}
 \usepackage{graphicx}
 \usepackage{hyperref}
+\usepackage{footnote}
 
 \begin{document}
 \maketitle
@@ -22,9 +23,41 @@ The network needs to understand what the characteristics of the given persona. T
 The network needs to derive a certain speaking/writing style from the given persona. Profile sentences like \textit{I bought my first home} \cite[]{liu2020impress} do not necessarily contribute to a distinct writing style.
 \end{itemize}
 Humans can use various ways of expressing them self, thus it is questionable if the expression style can be defined by just a few sentences. 
-\section{Thesis}
-Given the previously stated problems one might suggest to rather focus on a single persona and in order to derive a more complex style of writing/speaking. It might also be beneficial to extract the style in a more abstract representation than a persona definition. One possible way of modifying the generation style is pre-training on a biased dataset that contains human generated sequences. \cite[]{wullach2020hate} applied this approach successfully by fine-tuning the the GPT-2 model \cite[]{Radford2019LanguageMA} on a hateful data set in order to modify the generative style without loosing the rich language model encoded in GPT-2. 
-This approach could be used for a dialogue system as well. Therefore the thesis of my work is whether additional training on a biased dataset can be used to encode a human-like generative style in a neural network. Further, I will investigate on how to organize the additional training with the original (goal oriented) training. Three possible ways would be \textit{pre-training}, \textit{post-training} or an \textit{interleaved} training procedure. 
+
+An example generation of a such a model\footnote{\url{https://github.com/SivilTaram/Persona-Dialogue-Generation}} can be seen in Figure \ref{dialogue}. One can observe that the model is not trying to generate text in a certain style but rather generating sentences that contain the information given by the Persona. 
+
+\begin{figure}[h]
+\label{dialogue}
+\textbf{Persona:}
+\begin{itemize}
+\item She taught me to cook
+\item She died when i was 18
+\item My mother is from Russia
+\item I have a dog
+\end{itemize}
+\begin{tabular}{c | l}
+Me & Hello, how are you?\\
+Bot & Hello, I am well. How are you doing today?\\
+Me & I am not feeling well today.\\
+Bot & Why are you not feeling well today? What happened?\\
+Me & I have too much work to do.\\
+Bot & What do you do for living? I cook for my mother. She taught me to cook.\\
+Me & How is your mother?\\
+Bot & She died when I was 18, so I moved to Russia. Do you have any pets?
+\end{tabular}
+\caption[]{Dialogue generated with the model from \cite[]{liu2020impress}}
+\end{figure}
+
+\section{Research Question}
+Given the previously stated problems one might suggest to rather focus on a single persona and in order to derive a more complex style of writing/speaking. It might also be beneficial to extract the style in a more abstract representation than a persona definition. One possible way of modifying the generation style is pre-training on a biased dataset that contains human generated sequences. \cite[]{wullach2020hate} applied this approach successfully by fine-tuning the the GPT-2 model \cite[]{Radford2019LanguageMA} on a hateful data set in order to modify the generative style without loosing the rich language model encoded in GPT-2. This approach could be used for a dialogue system as well. 
+
+Therefore, the research question of my work is whether additional training on a biased dataset can be used to encode a human-like generative style in a neural network.
+My work will include the following tasks:
+\begin{itemize}
+\item Find a suitable  goal-oriented baseline model that can be used for additional training. The model must fit the limited google colab resources. Further, the baseline model should be usable for a recommendation system due to the research background of my advisor.
+\item Find suitable biased datasets for different persona that can be used for training.
+\item Examine different variance of the additional training e.g. \textit{pre-training}, \textit{post-training} or an \textit{interleaved} training procedure. The overall training time must not exceed an acceptable threshold due to the limited training resources.
+\end{itemize}
 \section{Time-line}
 \begin{figure}[h]
 \centering
