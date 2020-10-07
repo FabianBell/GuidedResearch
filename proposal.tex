@@ -15,7 +15,7 @@
 \begin{document}
 \maketitle
 \section{Background and Motivation}
-Dialogue systems (e.g. Chat-bots) have made great progress during the last years. Mainly because of the invention of novel neural models and machine learning techniques. Because of the progress, many current research aim to improve the dialogue systems on an individual and human-like level. Recent articles \cite[]{DBLP:journals/corr/abs-1901-08149, liu2020impress} tried to tackle this problem by feeding a persona into the network. The network is then trained to extract characteristic information from the given persona in order to generate a human-like output sequence. The persona is defined by a set of profile sentences like \textit{I like books}. The problem of these approaches consist of two tasks:
+Dialogue systems (e.g. Chat-bots) have made great progress during the last years, mainly because of the invention of novel neural models and machine learning techniques. Because of the progress, current research aims to improve the dialogue systems on an individual and human-like level. Recent articles \cite[]{DBLP:journals/corr/abs-1901-08149, liu2020impress} tried to tackle this problem by feeding a persona into the network. The network is then trained to extract characteristic information from the given persona in order to generate a human-like output sequence. The persona is defined by a set of profile sentences like \textit{I like books}. The problem of these approaches consist of two tasks:
 \begin{itemize}
 \item \textbf{Persona understanding:}\\
 The network needs to understand what the characteristics of the given persona are. This also yields the question on what defines a certain persona and on how to formulate the profile sentences, since the Persona definition has to be done manually. 
@@ -54,7 +54,7 @@ Given the previously stated problems one might suggest to rather focus on a sing
 Therefore, the research question of my work is whether additional training on a biased dataset can be used to encode a human-like generative style in a neural network.
 My work will include the following tasks:
 \begin{itemize}
-\item Find a suitable  goal-oriented baseline model that can be used for additional training. The model must fit the limited google colab resources. Further, the baseline model should be usable for a recommendation system due to the research background of my advisor.
+\item Find a suitable  goal-oriented baseline model that can be used for additional training. The model must fit the limited google colab resources.
 \item Find suitable biased datasets for different persona that can be used for training.
 \item Examine different variances of the additional training e.g. \textit{pre-training}, \textit{post-training} or an \textit{interleaved} training procedure. The overall training time must not exceed an acceptable threshold due to the limited training resources.
 \end{itemize}
