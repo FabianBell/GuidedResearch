@@ -1,0 +1,7 @@
+# python
+__pycache__
+# pytorch
+*.pt
+# datasets
+dialogue_dataset/
+review_data/
