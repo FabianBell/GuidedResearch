@@ -18,7 +18,7 @@ class Agent:
         return tokenizer
 
     def __init__(self):
-        self.model = DialogueRestyler(inference=True)
+        self.model = DialogueRestyler()
         self.model.load_state_dict(torch.load('model_DialogueRestyler.pt'))
         self.tokenizer = self._get_tokenizer()
         self.bs_pattern = re.compile(r'.*{\s\s(?P<data>.*)\s\s}.*')
@@ -55,10 +55,7 @@ class Agent:
             input_ids,
             torch.ones(input_ids.shape[0], input_ids.shape[1] + 1, dtype=torch.long),
             torch.zeros(1, 512),
-            torch.zeros(1, 1, dtype=torch.long),
-            torch.zeros(1, 1, dtype=torch.long),
-            max_length=512,
-            modify_style=False
+            max_length=512
         )
         beliefe_state = self.tokenizer.decode(pred[0])
         return beliefe_state
@@ -75,7 +72,8 @@ class Agent:
             torch.tensor([[0.2, 0.4, 0.2, 0.4] + [0.]* 508]),
             target_ids,
             target_mask,
-            max_length=512
+            max_length=512,
+            inference=True
         )
         response = self.tokenizer.decode(pred[0])
         return response
@@ -89,11 +87,12 @@ class Agent:
             target += user
             history += user
             beliefe_state = self._get_beliefe_state(history)
-            print(beliefe_state)
+            #print(beliefe_state)
             bs_data = self._get_bs_dict(beliefe_state)
             kb_data = self.db(bs_data)
-            print(kb_data)
+            #print(kb_data)
             intermediate = ''.join([history, beliefe_state, kb_data])
+            print(intermediate)
             response = self._get_response(intermediate, target, source)
             output = ' assistant: ' + response
             source += output

@@ -77,7 +77,7 @@ def run_training():
   name = 'DialogueRestyler' #@param {type: "string"}
   lr = 1e-3 #@param
   optimize_every = 5#@param
-  batch_size=12 #@param
+  batch_size=4 #@param
   patience=0 #@param
   epochs = 100 #@param
   check_val_every_n_epoch = 0.5 #@param
@@ -90,11 +90,11 @@ def run_training():
   trainer = pl.Trainer(
       max_epochs=epochs,
       check_val_every_n_epoch=check_val_every_n_epoch, 
-      gpus=[5, 6, 7],
-      accelerator='dp',
+      gpus=-1,
+      accelerator='ddp',
       accumulate_grad_batches=optimize_every
       )
   trainer.fit(model)
   torch.save(model.model.state_dict(), f'model_{name}.pt')
 
-#run_training()
+run_training()

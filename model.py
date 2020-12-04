@@ -17,11 +17,10 @@ class TrojanHorse:
 
 class StyleEncoder(nn.Module):
 
-    def __init__(self, encoder, inference=False, style_delta=4):
+    def __init__(self, encoder, style_delta=8):
         super().__init__()
         self.encoder = encoder
         self.style_encoder = deepcopy(encoder)
-        self.inference = inference
         self.style_delta = style_delta
 
     def _extract_style(self, ids, mask):
@@ -32,8 +31,8 @@ class StyleEncoder(nn.Module):
         
 
     def forward(self, input_ids, attention_mask, **inp):
-        if self.inference is True:
-            context_ids, context_mask, input_ids, prefix, source_context_ids, source_context_mask = input_ids
+        if input_ids.elems[-1] is True:
+            context_ids, context_mask, input_ids, prefix, source_context_ids, source_context_mask, _ = input_ids
             target_vec = self._extract_style(context_ids, context_mask)
             source_vec = self._extract_style(source_context_ids, source_context_mask)
             input_vec = self._extract_style(input_ids, attention_mask[:, 1:])
@@ -49,21 +48,20 @@ class StyleEncoder(nn.Module):
 
 class DialogueRestyler(nn.Module):
     
-    def __init__(self, apply_back_translation=False, inference=False):
+    def __init__(self, apply_back_translation=False):
         super().__init__()
         self.model = T5ForConditionalGeneration.from_pretrained('t5-small',
                                                             return_dict=True)
-        self.model.encoder = StyleEncoder(self.model.encoder, inference=inference)
+        self.model.encoder = StyleEncoder(self.model.encoder)
         self.apply_back_translation=apply_back_translation
-        self.inference = inference
 
     def forward(self, context_ids, context_mask, input_ids, input_mask, target,
-                prefix, source_context_ids=None, source_context_mask=None):
+                prefix, source_context_ids=None, source_context_mask=None, inference=False):
         if self.apply_back_translation is True:
             context_ids, context_mask, input_ids, input_mask, target, prefix = \
                 self.back_translation(context_ids, context_mask, input_ids, 
                                       input_mask, target, prefix)
-        if self.inference is True:
+        if inference is True:
             assert source_context_ids is not None and source_context_mask is not None
             input_ids = (context_ids, context_mask, input_ids, prefix, source_context_ids, source_context_mask)
         else:
@@ -72,8 +70,9 @@ class DialogueRestyler(nn.Module):
         return out
     
     def generate(self, context_ids, context_mask, input_ids, input_mask, prefix, *args,
-                 modify_style=True, **kwargs):
-      self.inference = modify_style
+                 inference=False, **kwargs):
+      if inference is True:
+        args = (*args, True)
       input_ids = TrojanHorse(context_ids, context_mask, input_ids, prefix, *args)
       pred = self.model.generate(input_ids=input_ids, 
                                  attention_mask=input_mask, **kwargs)
@@ -101,3 +100,4 @@ class DialogueRestyler(nn.Module):
       corrupted[3*section_size:, :] = seq
       corrupted_mask[3*section_size:, :] = mask
       return context, context_mask, corrupted, corrupted_mask, target, prefix
+
