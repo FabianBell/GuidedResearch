@@ -5,3 +5,5 @@ __pycache__
 # datasets
 dialogue_dataset/
 review_data/
+#lightning
+lightning_logs/
