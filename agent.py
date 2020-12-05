@@ -14,7 +14,7 @@ class Agent:
         KB_PREFIX = ' DB: '
         EOKB = '<EOKB>'
         tokenizer = T5Tokenizer.from_pretrained('t5-small',
-            additional_special_tokens=[EOB, BELIEF_PREFIX, BELIEF_SUFFIX, KB_PREFIX, EOKB, '{', '}', 'assistant:', 'user:', *[f'<extra_id_{i}>' for i in range(100)]])
+            additional_special_tokens=[EOB, BELIEF_PREFIX, BELIEF_SUFFIX, KB_PREFIX, EOKB, '{', '}', 'assistant:', 'user:', '<CTX>', *[f'<extra_id_{i}>' for i in range(100)]])
         return tokenizer
 
     def __init__(self):

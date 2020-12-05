@@ -11,6 +11,8 @@ import torch
 STYLE_PATH = 'review_data'
 DIALOGUE_PATH = 'dialogue_dataset'
 
+CONTEXT_ID = 32109
+
 class StyleDataset(Dataset):
     """
     Dataset for style based setence reconstruction
@@ -85,12 +87,11 @@ class StyleDataset(Dataset):
                   set(list(real_counts.keys()) + list(corrupted_counts.keys()))]
       add = -sum([rel for rel in relative if rel < 0])
       delete = sum([rel for rel in relative if rel > 0])
-
       add_rate = add / len(real)
       if len(corrupted) == 0:
         delete_rate = 1.0      
       else:
-        delete_rate = delete / len(corrupted)
+        delete_rate = delete / len(real)
       min_add, max_add = self._get_ranges(add_rate)
       min_del, max_del = self._get_ranges(delete_rate)
       prefix = np.zeros(self.dim)
@@ -106,7 +107,9 @@ class StyleDataset(Dataset):
         else:
           corrupted = sample2
         prefix = self._get_hidden_state_prefix(sample2, corrupted)
-        return sample1, corrupted, sample2, prefix
+        assert all([elem >= 0 and elem <= 1 for elem in prefix]), prefix
+        inp = sample1 + [CONTEXT_ID] + corrupted
+        return inp, sample2, prefix
 
 """### Dialogue Dataset"""
 
