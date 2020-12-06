@@ -3,6 +3,8 @@ import torch.nn as nn
 from transformers import T5ForConditionalGeneration
 from copy import deepcopy
 
+from datasets import CONTEXT_ID 
+
 class TrojanHorse:
   
   def __init__(self, *elems):
@@ -31,18 +33,12 @@ class StyleEncoder(nn.Module):
         
 
     def forward(self, input_ids, attention_mask, **inp):
-        if input_ids.elems[-1] is True:
-            context_ids, context_mask, input_ids, prefix, source_context_ids, source_context_mask, _ = input_ids
-            target_vec = self._extract_style(context_ids, context_mask)
-            source_vec = self._extract_style(source_context_ids, source_context_mask)
-            input_vec = self._extract_style(input_ids, attention_mask[:, 1:])
-            context_vec = input_vec + self.style_delta * (target_vec - source_vec)
-        else:
-            context_ids, context_mask, input_ids, prefix = input_ids
-            context_vec = self._extract_style(context_ids, context_mask)
+        context_ids, context_mask, input_ids, prefix = input_ids
+        style_rows = torch.nonzero(input_ids == CONTEXT_ID)[:, 0]
+        context_vec = self._extract_style(context_ids[style_rows], context_mask[style_rows])
         encoding = self.encoder(input_ids=input_ids, 
                                 attention_mask=attention_mask[:, 1:], **inp)
-        encoding.last_hidden_state = encoding.last_hidden_state + context_vec[:, None, :]
+        encoding.last_hidden_state[style_rows] += context_vec[:, None, :]
         encoding.last_hidden_state = torch.cat([prefix[:, None, :], encoding.last_hidden_state], 1)
         return encoding
 
@@ -55,25 +51,17 @@ class DialogueRestyler(nn.Module):
         self.model.encoder = StyleEncoder(self.model.encoder)
         self.apply_back_translation=apply_back_translation
 
-    def forward(self, context_ids, context_mask, input_ids, input_mask, target,
-                prefix, source_context_ids=None, source_context_mask=None, inference=False):
+    def forward(self, context_ids, context_mask, input_ids, input_mask, target, prefix):
         if self.apply_back_translation is True:
             context_ids, context_mask, input_ids, input_mask, target, prefix = \
                 self.back_translation(context_ids, context_mask, input_ids, 
                                       input_mask, target, prefix)
-        if inference is True:
-            assert source_context_ids is not None and source_context_mask is not None
-            input_ids = (context_ids, context_mask, input_ids, prefix, source_context_ids, source_context_mask)
-        else:
-            input_ids = (context_ids, context_mask, input_ids, prefix)
+        input_ids = (context_ids, context_mask, input_ids, prefix)
         out = self.model(input_ids=input_ids, attention_mask=input_mask, labels=target)
         return out
     
-    def generate(self, context_ids, context_mask, input_ids, input_mask, prefix, *args,
-                 inference=False, **kwargs):
-      if inference is True:
-        args = (*args, True)
-      input_ids = TrojanHorse(context_ids, context_mask, input_ids, prefix, *args)
+    def generate(self, context_ids, context_mask, input_ids, input_mask, prefix, **kwargs):
+      input_ids = TrojanHorse(context_ids, context_mask, input_ids, prefix)
       pred = self.model.generate(input_ids=input_ids, 
                                  attention_mask=input_mask, **kwargs)
       return pred

@@ -108,8 +108,8 @@ class StyleDataset(Dataset):
           corrupted = sample2
         prefix = self._get_hidden_state_prefix(sample2, corrupted)
         assert all([elem >= 0 and elem <= 1 for elem in prefix]), prefix
-        inp = sample1 + [CONTEXT_ID] + corrupted
-        return inp, sample2, prefix
+        corrupted = [CONTEXT_ID] + corrupted
+        return sample1, corrupted, sample2, prefix
 
 """### Dialogue Dataset"""
 
