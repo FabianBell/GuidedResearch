@@ -63,6 +63,8 @@ class TrainingModel(pl.LightningModule):
   def training_step(self, batch, batch_nb):
     loss = self.base_step(batch)
     self.log('train_loss', loss)
+    if batch_nb % 1000:
+        torch.save(self.model, 'model.pt')
     return loss
   
   def validation_step(self, batch, batch_nb):
