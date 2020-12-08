@@ -85,7 +85,7 @@ class Agent:
         while True:
             user = ' user: ' + str(input('>>>'))
             target += user
-            history += user
+            history += 'user: ' + user
             beliefe_state = self._get_solist_result(history)
             bs_data = self._get_bs_dict(beliefe_state)
             kb_data = self.db(bs_data)
