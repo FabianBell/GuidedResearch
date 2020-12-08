@@ -38,7 +38,7 @@ class StyleEncoder(nn.Module):
             target_ids, target_mask, input_ids, prefix, source_ids, source_mask = input_ids
             target_vec = self._extract_style(target_ids, target_mask)
             source_vec = self._extract_style(source_ids, source_mask)
-            input_vec = self._extract_style(input_ids, attention_mask)
+            input_vec = self._extract_style(input_ids, attention_mask[:, 1:])
             context_vec = input_vec + self.style_delta * (target_vec - source_vec)
             encoding = self.encoder(input_ids=input_ids, 
                                     attention_mask=attention_mask[:, 1:], **inp)
@@ -46,10 +46,14 @@ class StyleEncoder(nn.Module):
         else:
             context_ids, context_mask, input_ids, prefix = input_ids
             style_rows = torch.nonzero(input_ids == CONTEXT_ID)[:, 0]
-            context_vec = self._extract_style(context_ids[style_rows], context_mask[style_rows])
-            encoding = self.encoder(input_ids=input_ids, 
-                                    attention_mask=attention_mask[:, 1:], **inp)
-            encoding.last_hidden_state[style_rows] += context_vec[:, None, :]
+            if style_rows.shape[0] > 0:
+                context_vec = self._extract_style(context_ids[style_rows], context_mask[style_rows])
+                encoding = self.encoder(input_ids=input_ids, 
+                                        attention_mask=attention_mask[:, 1:], **inp)
+                encoding.last_hidden_state[style_rows] += context_vec[:, None, :]
+            else:
+                encoding = self.encoder(input_ids=input_ids, 
+                                        attention_mask=attention_mask[:, 1:], **inp)
         encoding.last_hidden_state = torch.cat([prefix[:, None, :], encoding.last_hidden_state], 1)
         return encoding
 

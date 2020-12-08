@@ -63,8 +63,10 @@ class TrainingModel(pl.LightningModule):
   def training_step(self, batch, batch_nb):
     loss = self.base_step(batch)
     self.log('train_loss', loss)
-    if batch_nb % 1000:
-        torch.save(self.model, 'model.pt')
+    if batch_nb % 1000 == 0 and torch.distributed.get_rank() == 0:
+        # save in master
+        print('Save model')
+        torch.save(self.model.state_dict(), 'model_DialogueRestyler.pt')
     return loss
   
   def validation_step(self, batch, batch_nb):

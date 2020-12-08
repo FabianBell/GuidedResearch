@@ -5,6 +5,8 @@ import torch
 
 from model import *
 
+CONTEXT_ID = 32109
+
 class Agent:
 
     def _get_tokenizer(self):
@@ -19,7 +21,7 @@ class Agent:
 
     def __init__(self):
         self.model = DialogueRestyler()
-        self.model.load_state_dict(torch.load('model_DialogueRestyler.pt'))
+        self.model.load_state_dict(torch.load('model.pt'))
         self.tokenizer = self._get_tokenizer()
         self.bs_pattern = re.compile(r'.*{\s\s(?P<data>.*)\s\s}.*')
         self.queried = []
@@ -60,10 +62,10 @@ class Agent:
         beliefe_state = self.tokenizer.decode(pred[0])
         return beliefe_state
 
-    def _get_modified_response(response, source, target):
-        input_ids = self.tokenizer(response).input_ids
-        source_ids, source_mask = self.tokenizer(source).values()
-        target_ids, target_mask = self.tokenizer(target).values()
+    def _get_modified_response(self, response, source, target):
+        input_ids = torch.tensor([[CONTEXT_ID] + self.tokenizer(response).input_ids])
+        source_ids, source_mask = self.tokenizer(source, return_tensors='pt').values()
+        target_ids, target_mask = self.tokenizer(target, return_tensors='pt').values()
         pred = self.model.generate(
             target_ids,
             target_mask,
@@ -87,8 +89,10 @@ class Agent:
             beliefe_state = self._get_solist_result(history)
             bs_data = self._get_bs_dict(beliefe_state)
             kb_data = self.db(bs_data)
+            print('Beliefe state', beliefe_state)
             intermediate = ''.join([history, beliefe_state, kb_data])
             response = self._get_solist_result(intermediate)
+            print('Response', response)
             source += ' ' + response
             history += ' assistant: ' + response
             response = self._get_modified_response(response, source, target)
