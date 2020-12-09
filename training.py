@@ -89,16 +89,16 @@ def run_training():
   dataset_con = lambda split: StyleDialogueDataset(split, dim=512)
   model = TrainingModel(dataset_con, model_con, lr=lr, 
                       batch_size=batch_size, patience=patience)
-  if os.path.exists(f'model_{name}.pt'):
-    model.model.load_state_dict(torch.load(f'model_{name}.pt'))
+  if os.path.exists(f'model.pt'):
+    model.model.load_state_dict(torch.load(f'model.pt'))
   trainer = pl.Trainer(
       max_epochs=epochs,
       check_val_every_n_epoch=check_val_every_n_epoch, 
-      gpus=-1,
-      accelerator='ddp',
+      #gpus=-1,
+      #accelerator='ddp',
       accumulate_grad_batches=optimize_every
       )
   trainer.fit(model)
-  torch.save(model.model.state_dict(), f'model_{name}.pt')
+  torch.save(model.model.state_dict(), f'model.pt')
 
 run_training()

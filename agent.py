@@ -73,7 +73,8 @@ class Agent:
             torch.ones(input_ids.shape[0], input_ids.shape[1] + 1, dtype=torch.long),
             torch.tensor([[0.2, 0.4, 0.2, 0.4] + [0.]* 508]),
             source_ids,
-            source_mask
+            source_mask,
+            max_length=512
         )
         response = self.tokenizer.decode(pred[0])
         return response
@@ -83,16 +84,24 @@ class Agent:
         target = ''
         source = ''
         while True:
-            user = ' user: ' + str(input('>>>'))
+            user = str(input('>>>'))
+            if user == 'restart':
+                history = ''
+                target = ''
+                source = ''
+                print('\n## Restart agent\n')
+                continue
+            if user == 'close':
+                break
             target += user
             history += 'user: ' + user
             beliefe_state = self._get_solist_result(history)
             bs_data = self._get_bs_dict(beliefe_state)
             kb_data = self.db(bs_data)
-            print('Beliefe state', beliefe_state)
+            #print('Beliefe state:', beliefe_state)
             intermediate = ''.join([history, beliefe_state, kb_data])
             response = self._get_solist_result(intermediate)
-            print('Response', response)
+            #print('Response:', response)
             source += ' ' + response
             history += ' assistant: ' + response
             response = self._get_modified_response(response, source, target)
