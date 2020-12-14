@@ -66,7 +66,7 @@ class TrainingModel(pl.LightningModule):
     if batch_nb % 1000 == 0 and torch.distributed.get_rank() == 0:
         # save in master
         print('Save model')
-        torch.save(self.model.state_dict(), 'model_DialogueRestyler.pt')
+        torch.save(self.model.state_dict(), 'model.pt')
     return loss
   
   def validation_step(self, batch, batch_nb):
@@ -90,15 +90,15 @@ def run_training():
   model = TrainingModel(dataset_con, model_con, lr=lr, 
                       batch_size=batch_size, patience=patience)
   if os.path.exists(f'model.pt'):
+    print('Model loaded')
     model.model.load_state_dict(torch.load(f'model.pt'))
   trainer = pl.Trainer(
       max_epochs=epochs,
       check_val_every_n_epoch=check_val_every_n_epoch, 
-      #gpus=-1,
-      #accelerator='ddp',
+      gpus=-1,
+      accelerator='ddp',
       accumulate_grad_batches=optimize_every
       )
   trainer.fit(model)
-  torch.save(model.model.state_dict(), f'model.pt')
 
 run_training()

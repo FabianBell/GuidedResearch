@@ -21,7 +21,7 @@ class Agent:
 
     def __init__(self):
         self.model = DialogueRestyler()
-        self.model.load_state_dict(torch.load('model.pt'))
+        self.model.load_state_dict(torch.load('prod_model.pt'))
         self.tokenizer = self._get_tokenizer()
         self.bs_pattern = re.compile(r'.*{\s\s(?P<data>.*)\s\s}.*')
         self.queried = []
