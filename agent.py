@@ -2,16 +2,18 @@ from transformers import T5Tokenizer, logging
 logging.set_verbosity_error()
 import re
 import torch
+import pandas as pd
+import random
 
 from model import *
 
-CONTEXT_ID = 32109
-
-OKAY = '\033[92m'
-ERROR = '\033[91m'
-END = '\033[0m'
-
 class Agent:
+    
+    CONTEXT_ID = 32109
+
+    OKAY = '\033[92m'
+    ERROR = '\033[91m'
+    END = '\033[0m'
 
     def _get_tokenizer(self):
         EOB = '<EOB>'
@@ -27,32 +29,34 @@ class Agent:
         self.model = DialogueRestyler()
         self.model.load_state_dict(torch.load('prod_model.pt'))
         self.tokenizer = self._get_tokenizer()
-        self.bs_pattern = re.compile(r'.*{\s\s(?P<data>.*)\s\s}.*')
+        self.bs_pattern = re.compile(r'[^{]*{\s(?P<data>[^}]*)\s}(\squery\s{\s(?P<query>.*)\s})?\s<EOB>\s*')
         self.argument_pattern = re.compile(r':set\s(?P<arg>\w*)=(?P<argv>\w*)')
-        self.queried = []
+        self.kb = pd.read_pickle('kb.pkl')
 
     def _get_bs_dict(self, seq):
-        match = self.bs_pattern.match(seq)
+        match = self.bs_pattern.fullmatch(seq)
         if match is not None:
-            data = match.group('data')
-            data = [elem.split(' = ') for elem in data.split('; ')]
-            data = {k : v for k, v in data}
-            return data
-        return dict()
+            if match.group('query') is not None:
+                data = match.group('data')
+                data = [elem.split(' = ') for elem in data.split('; ')]
+                data = {k : v for k, v in data}
+                return match.group('query'), data
+            else:
+                return None
+        raise Exception(f'Invalid beliefe state {seq}')
 
     # name.movie = frozen; location = Koblenz; name.theater = KINOPOLIS Koblenz; date.showing = today
-    def db(self, data):
-        query = list(data.keys())
-        if 0 not in self.queried and {'name.movie', 'location', 'date.showing', 'time.showing', 'num.tickets'}.issubset(set(query)):
-            self.queried.append(0)
-            return ' DB  book_tickets { status = success } <EOKB>'
-        if 1 not in self.queried and {'name.movie', 'location'}.issubset(set(query)):
-            self.queried.append(1)
-            return ' DB:  find_theater { name.cinema_1 = KINOPOLIS Koblenz } <EOKB>'
-        if 2 not in self.queried and {'name.movie','location', 'name.theater', 'date.showing'}.issubset(set(query)):
-            self.queried.append(2)
-            return ' DB: find_showtimes { time.showing_1 = 10 pm ; time.showing_2 = 10 am } <EOKB>'
-        return ' DB:  <EOKB>'
+    #' DB: find_showtimes { time.showing_1 = 10 pm ; time.showing_2 = 10 am } <EOKB>'
+    def db(self, bs_resp):
+        if bs_resp is not None:
+            query, bs_data = bs_resp
+            args = list(bs_data.keys())
+            query_data = self.kb[(self.kb.name == query) & (self.kb.args.apply(lambda x: x.issubset(args)))].apply(lambda x: x.apply(len) if x.name == 'args' else x).sort_values('args', ascending=False).iloc[0]
+            resp = ' ; '.join([f'{query_data.response}_{i+1} = {elem}' for i, elem in enumerate(random.choice(query_data.data)[1])])
+            resp = f'{query} { {resp} }'
+        else:
+            resp = ''
+        return f' DB: {resp} <EOKB>'
 
     def _get_solist_result(self, inp):
         input_ids = self.tokenizer(inp, return_tensors='pt').input_ids
@@ -68,7 +72,7 @@ class Agent:
         return beliefe_state
 
     def _get_modified_response(self, response, source, target):
-        input_ids = torch.tensor([[CONTEXT_ID] + self.tokenizer(response).input_ids])
+        input_ids = torch.tensor([[self.CONTEXT_ID] + self.tokenizer(response).input_ids])
         source_ids, source_mask = self.tokenizer(source, return_tensors='pt').values()
         target_ids, target_mask = self.tokenizer(target, return_tensors='pt').values()
         pred = self.model.generate(
@@ -97,30 +101,29 @@ class Agent:
                     try:
                         level = int(argv)
                         self.model.set_style_level(level)
-                        print(OKAY + "New style level set" + END)
+                        print(self.OKAY + "New style level set" + self.END)
                     except ValueError:
-                        print(ERROR + f"Invalid value {argv} for argument {arg}" + END)
+                        print(self.ERROR + f"Invalid value {argv} for argument {arg}" + self.END)
                 else:
-                    print(ERROR + f"Unkown argument {arg}" + END)
+                    print(self.ERROR + f"Unkown argument {arg}" + self.END)
                 continue
             if user == 'restart':
                 history = ''
                 target = ''
                 source = ''
-                print(OKAY + '\n## Restart agent\n' + END)
+                print(self.OKAY + '\n## Restart agent\n' + self.END)
                 continue
             if user == 'close':
                 break
             target += user
             history += 'user: ' + user
             beliefe_state = self._get_solist_result(history)
-            print(beliefe_state)
             bs_data = self._get_bs_dict(beliefe_state)
             kb_data = self.db(bs_data)
-            #print('Beliefe state:', beliefe_state)
+            print('Beliefe state:', beliefe_state)
             intermediate = ''.join([history, beliefe_state, kb_data])
             response = self._get_solist_result(intermediate)
-            #print('Response:', response)
+            print('Response:', response)
             source += ' ' + response
             history += ' assistant: ' + response
             response = self._get_modified_response(response, source, target)
