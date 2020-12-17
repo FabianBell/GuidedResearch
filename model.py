@@ -19,7 +19,7 @@ class TrojanHorse:
 
 class StyleEncoder(nn.Module):
 
-    def __init__(self, encoder, style_delta=8):
+    def __init__(self, encoder, style_delta=2):
         super().__init__()
         self.encoder = encoder
         self.style_encoder = deepcopy(encoder)
@@ -58,13 +58,16 @@ class StyleEncoder(nn.Module):
         return encoding
 
 class DialogueRestyler(nn.Module):
-    
+
     def __init__(self, apply_back_translation=False):
         super().__init__()
         self.model = T5ForConditionalGeneration.from_pretrained('t5-small',
                                                             return_dict=True)
         self.model.encoder = StyleEncoder(self.model.encoder)
         self.apply_back_translation=apply_back_translation
+
+    def set_style_level(self, level):
+        self.model.encoder.style_delta = level
 
     def forward(self, context_ids, context_mask, input_ids, input_mask, target, prefix):
         if self.apply_back_translation is True:

@@ -7,16 +7,20 @@ from model import *
 
 CONTEXT_ID = 32109
 
+OKAY = '\033[92m'
+ERROR = '\033[91m'
+END = '\033[0m'
+
 class Agent:
 
     def _get_tokenizer(self):
         EOB = '<EOB>'
         BELIEF_PREFIX = ' => Belief State : Movie Tickets { '
-        BELIEF_SUFFIX = ' } ' + EOB
         KB_PREFIX = ' DB: '
         EOKB = '<EOKB>'
+        QUERY = 'query'
         tokenizer = T5Tokenizer.from_pretrained('t5-small',
-            additional_special_tokens=[EOB, BELIEF_PREFIX, BELIEF_SUFFIX, KB_PREFIX, EOKB, '{', '}', 'assistant:', 'user:', '<CTX>', *[f'<extra_id_{i}>' for i in range(100)]])
+            additional_special_tokens=[EOB, BELIEF_PREFIX, EOB, KB_PREFIX, EOKB, '{', '}', 'assistant:', 'user:', '<CTX>', QUERY, *[f'<extra_id_{i}>' for i in range(100)]])
         return tokenizer
 
     def __init__(self):
@@ -24,6 +28,7 @@ class Agent:
         self.model.load_state_dict(torch.load('prod_model.pt'))
         self.tokenizer = self._get_tokenizer()
         self.bs_pattern = re.compile(r'.*{\s\s(?P<data>.*)\s\s}.*')
+        self.argument_pattern = re.compile(r':set\s(?P<arg>\w*)=(?P<argv>\w*)')
         self.queried = []
 
     def _get_bs_dict(self, seq):
@@ -85,17 +90,31 @@ class Agent:
         source = ''
         while True:
             user = str(input('>>>'))
+            match = self.argument_pattern.fullmatch(user)
+            if match is not None:
+                arg, argv = match.groups()
+                if arg == 'level':
+                    try:
+                        level = int(argv)
+                        self.model.set_style_level(level)
+                        print(OKAY + "New style level set" + END)
+                    except ValueError:
+                        print(ERROR + f"Invalid value {argv} for argument {arg}" + END)
+                else:
+                    print(ERROR + f"Unkown argument {arg}" + END)
+                continue
             if user == 'restart':
                 history = ''
                 target = ''
                 source = ''
-                print('\n## Restart agent\n')
+                print(OKAY + '\n## Restart agent\n' + END)
                 continue
             if user == 'close':
                 break
             target += user
             history += 'user: ' + user
             beliefe_state = self._get_solist_result(history)
+            print(beliefe_state)
             bs_data = self._get_bs_dict(beliefe_state)
             kb_data = self.db(bs_data)
             #print('Beliefe state:', beliefe_state)
