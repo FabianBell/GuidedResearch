@@ -29,7 +29,7 @@ class Agent:
         self.model = DialogueRestyler()
         self.model.load_state_dict(torch.load('prod_model.pt'))
         self.tokenizer = self._get_tokenizer()
-        self.bs_pattern = re.compile(r'[^{]*{\s(?P<data>[^}]*)\s}(\squery\s{\s(?P<query>.*)\s})?\s<EOB>\s*')
+        self.bs_pattern = re.compile(r'[^{]*{\s\s?(?P<data>[^}]*)\s}(\squery\s{\s(?P<query>.*)\s})?\s<EOB>\s*')
         self.argument_pattern = re.compile(r':set\s(?P<arg>\w*)=(?P<argv>\w*)')
         self.kb = pd.read_pickle('kb.pkl')
 
@@ -45,13 +45,15 @@ class Agent:
                 return None
         raise Exception(f'Invalid beliefe state {seq}')
 
-    # name.movie = frozen; location = Koblenz; name.theater = KINOPOLIS Koblenz; date.showing = today
-    #' DB: find_showtimes { time.showing_1 = 10 pm ; time.showing_2 = 10 am } <EOKB>'
     def db(self, bs_resp):
         if bs_resp is not None:
             query, bs_data = bs_resp
+            print(query)
             args = list(bs_data.keys())
-            query_data = self.kb[(self.kb.name == query) & (self.kb.args.apply(lambda x: x.issubset(args)))].apply(lambda x: x.apply(len) if x.name == 'args' else x).sort_values('args', ascending=False).iloc[0]
+            try:
+                query_data = self.kb[(self.kb.name == query) & (self.kb.args.apply(lambda x: x.issubset(args)))].apply(lambda x: x.apply(len) if x.name == 'args' else x).sort_values('args', ascending=False).iloc[0]
+            except IndexError:
+                raise Exception(query, args)
             resp = ' ; '.join([f'{query_data.response}_{i+1} = {elem}' for i, elem in enumerate(random.choice(query_data.data)[1])])
             resp = f'{query} { {resp} }'
         else:
@@ -88,12 +90,25 @@ class Agent:
         response = self.tokenizer.decode(pred[0])
         return response
 
+    def write_okay(self, seq):
+        print(self.OKAY + seq + self.END)
+
+    def write_error(self, seq):
+        print(self.ERROR + seq + self.END)
+
+    def write_out(self, seq):
+        print(f'>>>{seq}')
+
+    def get_in(self):
+        inp = input('>>>')
+        return inp
+
     def __call__(self):
         history = ''
         target = ''
         source = ''
         while True:
-            user = str(input('>>>'))
+            user = self.get_in()
             match = self.argument_pattern.fullmatch(user)
             if match is not None:
                 arg, argv = match.groups()
@@ -101,33 +116,33 @@ class Agent:
                     try:
                         level = int(argv)
                         self.model.set_style_level(level)
-                        print(self.OKAY + "New style level set" + self.END)
+                        self.write_okay("New style level set")
                     except ValueError:
-                        print(self.ERROR + f"Invalid value {argv} for argument {arg}" + self.END)
+                        self.write_error(f"Invalid value {argv} for argument {arg}")
                 else:
-                    print(self.ERROR + f"Unkown argument {arg}" + self.END)
+                    self.write_error(f"Unkown argument {arg}")
                 continue
             if user == 'restart':
                 history = ''
                 target = ''
                 source = ''
-                print(self.OKAY + '\n## Restart agent\n' + self.END)
+                self.write_okay('\n## Restart agent\n')
                 continue
             if user == 'close':
                 break
             target += user
             history += 'user: ' + user
             beliefe_state = self._get_solist_result(history)
+            #print('Beliefe state:', beliefe_state)
             bs_data = self._get_bs_dict(beliefe_state)
             kb_data = self.db(bs_data)
-            print('Beliefe state:', beliefe_state)
             intermediate = ''.join([history, beliefe_state, kb_data])
             response = self._get_solist_result(intermediate)
-            print('Response:', response)
+            #print('Response:', response)
             source += ' ' + response
             history += ' assistant: ' + response
             response = self._get_modified_response(response, source, target)
-            print(f'>>>{response}')
+            self.write_out(response)
 
 agent = Agent()
 agent()

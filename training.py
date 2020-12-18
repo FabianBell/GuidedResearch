@@ -39,9 +39,6 @@ class TrainingModel(pl.LightningModule):
   def train_dataloader(self):
     return self.get_dataloader('train', True)
 
-  def val_dataloader(self):
-    return self.get_dataloader('val', False)
-  
   def test_dataloader(self):
     return self.get_dataloader('test', False)
 
@@ -67,11 +64,6 @@ class TrainingModel(pl.LightningModule):
         # save in master
         print('Save model')
         torch.save(self.model.state_dict(), 'model.pt')
-    return loss
-  
-  def validation_step(self, batch, batch_nb):
-    loss = self.base_step(batch)
-    self.log('val_loss', loss)
     return loss
 
 """## Training"""
