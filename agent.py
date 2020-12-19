@@ -50,12 +50,13 @@ class Agent:
             query, bs_data = bs_resp
             print(query)
             args = list(bs_data.keys())
-            try:
-                query_data = self.kb[(self.kb.name == query) & (self.kb.args.apply(lambda x: x.issubset(args)))].apply(lambda x: x.apply(len) if x.name == 'args' else x).sort_values('args', ascending=False).iloc[0]
-            except IndexError:
-                raise Exception(query, args)
-            resp = ' ; '.join([f'{query_data.response}_{i+1} = {elem}' for i, elem in enumerate(random.choice(query_data.data)[1])])
-            resp = f'{query} { {resp} }'
+            query_data = self.kb[(self.kb.name == query) & (self.kb.args.apply(lambda x: x.issubset(args)))].apply(lambda x: x.apply(len) if x.name == 'args' else x).sort_values('args', ascending=False)
+            if len(query_data) == 0:
+                resp = ''
+            else:
+                query_data = query_data.iloc[0]
+                resp = ' ; '.join([f'{query_data.response}_{i+1} = {elem}' for i, elem in enumerate(random.choice(query_data.data)[1])])
+                resp = f'{query} { {resp} }'
         else:
             resp = ''
         return f' DB: {resp} <EOKB>'
