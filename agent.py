@@ -38,6 +38,7 @@ class Agent:
         if match is not None:
             if match.group('query') is not None:
                 data = match.group('data')
+                print(data)
                 data = [elem.split(' = ') for elem in data.split('; ')]
                 data = {k : v for k, v in data}
                 return match.group('query'), data
@@ -139,7 +140,7 @@ class Agent:
             kb_data = self.db(bs_data)
             intermediate = ''.join([history, beliefe_state, kb_data])
             response = self._get_solist_result(intermediate)
-            #print('Response:', response)
+            print('Response:', response)
             source += ' ' + response
             history += ' assistant: ' + response
             response = self._get_modified_response(response, source, target)
