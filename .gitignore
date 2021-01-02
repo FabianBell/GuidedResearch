@@ -2,8 +2,15 @@
 __pycache__
 # pytorch
 *.pt
+# data
+*.pkl
 # datasets
 dialogue_dataset/
 review_data/
 #lightning
 lightning_logs/
+# log files
+*.log
+log
+# exchange storage
+storage
