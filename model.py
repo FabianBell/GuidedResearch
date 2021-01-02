@@ -90,12 +90,12 @@ class DialogueRestyler(nn.Module):
       Applies a translation based on a fake context from the upper part of the
       batch stack. Should be only used during training.
       """
-      section_size = context.shape[0] // 4
-      context_section = context[2*section_size:3*section_size, :]
-      context_mask_section = context_mask[2*section_size:3*section_size, :]
-      corrupted_section = corrupted[3*section_size:, :]
-      corrupted_mask_section = corrupted_mask[3*section_size:, :]
-      prefix_section = prefix[2*section_size:3*section_size, :]
+      section_size = context.shape[0] // 2
+      context_section = context[:section_size, :]
+      context_mask_section = context_mask[:section_size, :]
+      corrupted_section = corrupted[section_size:, :]
+      corrupted_mask_section = corrupted_mask[section_size:, :]
+      prefix_section = prefix[:section_size, :]
       seq = self.generate(context_section, context_mask_section, corrupted_section, 
                   corrupted_mask_section, prefix_section, max_length=corrupted.shape[-1])
       pad = torch.zeros(seq.shape[0], corrupted.shape[1] - seq.shape[1], 
@@ -103,7 +103,7 @@ class DialogueRestyler(nn.Module):
       mask = torch.ones(seq.shape[0], seq.shape[1]+1, dtype=torch.long, device=seq.device)
       mask = torch.cat([mask, pad], 1)
       seq = torch.cat([seq, pad], 1)
-      corrupted[3*section_size:, :] = seq
-      corrupted_mask[3*section_size:, :] = mask
+      corrupted[section_size:, :] = seq
+      corrupted_mask[section_size:, :] = mask
       return context, context_mask, corrupted, corrupted_mask, target, prefix
 

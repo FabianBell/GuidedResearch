@@ -160,7 +160,7 @@ class StyleDialogueDataset(Dataset):
         # sample1, corrupted, sample2, prefix
         dialogue, style = zip(*batch)
         samples = [[] for _ in range(4)]
-        for elems in [dialogue, style]:
+        for elems in [style]: #[dialogue, style]:
             for i, elem in enumerate(zip(*elems)):
                 samples[i].extend(elem)
         context, corrupted, target, prefix = samples
