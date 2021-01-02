@@ -27,7 +27,7 @@ class TrainingModel(pl.LightningModule):
     """
     Creates the dataloader for the given split (['train', 'val', 'test'])
     """
-    dataset = self.dataset_con(split) 
+    dataset = self.dataset_con(split, self.model.model.config.d_model) 
     dataloader = DataLoader(dataset, batch_size=self.batch_size, 
                             shuffle=shuffle, collate_fn=dataset.collate_batch, 
                             num_workers=4)
@@ -72,13 +72,13 @@ class TrainingModel(pl.LightningModule):
 def run_training():
   name = 'DialogueRestyler' #@param {type: "string"}
   lr = 1e-3 #@param
-  optimize_every = 5#@param
-  batch_size=4 #@param
+  optimize_every = 10#@param
+  batch_size=8 #@param
   patience=0 #@param
   epochs = 100 #@param
   check_val_every_n_epoch = 0.5 #@param
   model_con = lambda: DialogueRestyler(apply_back_translation=True)
-  dataset_con = lambda split: StyleDialogueDataset(split, dim=512)
+  dataset_con = lambda split, dim: StyleDialogueDataset(split, dim=dim)
   model = TrainingModel(dataset_con, model_con, lr=lr, 
                       batch_size=batch_size, patience=patience)
   if os.path.exists(f'model.pt'):
