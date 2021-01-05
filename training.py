@@ -73,7 +73,7 @@ def run_training():
   name = 'DialogueRestyler' #@param {type: "string"}
   lr = 1e-3 #@param
   optimize_every = 10#@param
-  batch_size=8 #@param
+  batch_size=10 #@param
   patience=0 #@param
   epochs = 100 #@param
   check_val_every_n_epoch = 0.5 #@param
