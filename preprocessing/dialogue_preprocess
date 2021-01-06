@@ -7,6 +7,7 @@ import time
 
 import pandas as pd
 from bellparallel import parallel
+import json
 from transformers import T5Tokenizer, logging as tr_logging
 tr_logging.set_verbosity_error()
 
@@ -16,8 +17,7 @@ KB_PREFIX = ' DB: '
 EOKB = '<EOKB>'
 QUERY = 'query'
 
-tokenizer = T5Tokenizer.from_pretrained('t5-small', 
-    additional_special_tokens=[EOB, BELIEF_PREFIX, EOB, KB_PREFIX, EOKB, '{', '}', 'assistant:', 'user:', '<CTX>', QUERY, *[f'<extra_id_{i}>' for i in range(100)]])   
+global tokenizer 
 
 class Utterance:
     """
@@ -149,10 +149,12 @@ class Utterance:
         if self.speaker == 'user':
             inp = self.get_history()
             target = self.get_belief_state()
+            task = 'belief_state'
         else:
             inp = self.get_full_history()
             target = self.get_response()
-        return inp, target
+            task = 'response'
+        return inp, target, task, self.segments
     
     def is_valid(self):
         """
@@ -171,18 +173,27 @@ def preprocess(entry):
         prev_utterance = utterance
         utterances.append(utterance)
     utterances = [utterance.get_task() for utterance in utterances if utterance.is_valid()]
-    utterances = [(tokenizer(inp).input_ids, tokenizer(target).input_ids) for inp, target in utterances]
-    utterances = [(inp, target) for inp, target in utterances if len(inp) < 512 and len(target) < 512]
+    utterances = [(tokenizer(inp).input_ids, tokenizer(target).input_ids, inp, target, *args) for inp, target, *args in utterances]
+    utterances = [(inp, target, *args) for inp, target, *args in utterances if len(inp) < 512 and len(target) < 512]
     return utterances
 
 def main(args):
     data = pd.read_json(args.data)
+    global tokenizer 
+    tokenizer = T5Tokenizer.from_pretrained('t5-small', 
+        additional_special_tokens=[EOB, BELIEF_PREFIX, EOB, KB_PREFIX, EOKB, '{', '}', 'assistant:', 'user:', '<CTX>', QUERY, *[f'<extra_id_{i}>' for i in range(100)]])   
     utterances = preprocess(data.iloc, length=len(data))
     merged = []
     for utterance in utterances:
         merged.extend(utterance)
-    output_data = pd.DataFrame(merged, columns=['input', 'target'])
-    output_data.to_pickle('output.pkl')
+    if args.output_type is None and args.output_type == 'train':
+        merged = [elem[:2] for elem in merged]
+        output_data = pd.DataFrame(merged, columns=['input', 'target'])
+        output_data.to_pickle('output.pkl')
+    else:
+        merged = [elem[2:] for elem in merged]
+        with open('output.json', 'w') as data_file:
+            json.dump(merged, data_file)
 
 def dir_path(path):
     """
@@ -205,6 +216,7 @@ if __name__ == '__main__':
     
     parser.add_argument('--verbose', '-v', dest='verbose', action='store_true')
     parser.add_argument('data', type=file_path, help='Data path (.json)')
+    parser.add_argument('-t', dest='output_type', choices=['train', 'val'], help='Output type: train (used for training), val (used for validation)')
 
     args = parser.parse_args()
     if args.verbose is True:
