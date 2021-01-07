@@ -88,7 +88,7 @@ class Utterance:
         the current utterance
         """
         assert self.prev_utterance is not None
-        return self.prev_utterance.get_belief_state()
+        return self.prev_utterance.get_belief_state()[0]
     
     def get_belief_state(self):
         """
@@ -104,7 +104,7 @@ class Utterance:
         segments = self.get_segments()
         seq = '; '.join([f'{k} = {v}' for k, v in segments.items()])
         seq = BELIEF_PREFIX + seq + ' } ' + query + EOB
-        return seq
+        return seq, segments
     
     def get_prev_history(self):
         """
@@ -148,13 +148,14 @@ class Utterance:
         assert self.speaker in ['user', 'assistant']
         if self.speaker == 'user':
             inp = self.get_history()
-            target = self.get_belief_state()
+            target, segments = self.get_belief_state()
             task = 'belief_state'
         else:
             inp = self.get_full_history()
             target = self.get_response()
             task = 'response'
-        return inp, target, task, self.segments
+            segments = self.segments
+        return inp, target, task, segments
     
     def is_valid(self):
         """
