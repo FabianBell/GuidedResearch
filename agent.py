@@ -26,8 +26,10 @@ class Agent:
         return tokenizer
 
     def __init__(self):
-        self.model = DialogueRestyler()
-        self.model.load_state_dict(torch.load('prod_model.pt'))
+        self.solist = DialogueRestyler()
+        self.solist.load_state_dict(torch.load('solist.pt'))
+        self.textsettr = DialogueRestyler()
+        self.textsettr.load_state_dict(torch.load('textsettr.pt'))
         self.tokenizer = self._get_tokenizer()
         self.bs_pattern = re.compile(r'[^{]*{\s\s?(?P<data>[^}]*)\s}(\squery\s{\s(?P<query>.*)\s})?\s<EOB>\s*')
         self.argument_pattern = re.compile(r':set\s(?P<arg>\w*)=(?P<argv>\w*)')
@@ -64,7 +66,7 @@ class Agent:
 
     def _get_solist_result(self, inp):
         input_ids = self.tokenizer(inp, return_tensors='pt').input_ids
-        pred = self.model.generate(
+        pred = self.solist.generate(
             torch.zeros(1, 1, dtype=torch.long),
             torch.zeros(1, 1, dtype=torch.long),
             input_ids,
@@ -76,10 +78,12 @@ class Agent:
         return beliefe_state
 
     def _get_modified_response(self, response, source, target):
+        print('S:', source)
+        print('T:', target)
         input_ids = torch.tensor([[self.CONTEXT_ID] + self.tokenizer(response).input_ids])
         source_ids, source_mask = self.tokenizer(source, return_tensors='pt').values()
         target_ids, target_mask = self.tokenizer(target, return_tensors='pt').values()
-        pred = self.model.generate(
+        pred = self.textsettr.generate(
             target_ids,
             target_mask,
             input_ids,
@@ -117,7 +121,7 @@ class Agent:
                 if arg == 'level':
                     try:
                         level = int(argv)
-                        self.model.set_style_level(level)
+                        self.textsettr.set_style_level(level)
                         self.write_okay("New style level set")
                     except ValueError:
                         self.write_error(f"Invalid value {argv} for argument {arg}")
@@ -132,7 +136,7 @@ class Agent:
                 continue
             if user == 'close':
                 break
-            target += user
+            target += ' ' + user
             history += 'user: ' + user
             beliefe_state = self._get_solist_result(history)
             #print('Beliefe state:', beliefe_state)
