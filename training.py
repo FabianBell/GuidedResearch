@@ -7,7 +7,8 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 import os
 
 from datasets import *
-from model import *
+#from model import *
+from DGST import DGSTPair
 
 class TrainingModel(pl.LightningModule):
 
@@ -27,7 +28,7 @@ class TrainingModel(pl.LightningModule):
     """
     Creates the dataloader for the given split (['train', 'val', 'test'])
     """
-    dataset = self.dataset_con(split, self.model.model.config.d_model) 
+    dataset = self.dataset_con(split) 
     dataloader = DataLoader(dataset, batch_size=self.batch_size, 
                             shuffle=shuffle, collate_fn=dataset.collate_batch, 
                             num_workers=4)
@@ -52,8 +53,7 @@ class TrainingModel(pl.LightningModule):
     }
 
   def base_step(self, batch):
-    context, context_mask, corrupted, corrupted_mask, target, prefix = batch
-    out = self(context, context_mask, corrupted, corrupted_mask, target, prefix)
+    out = self(*batch)
     loss = out.loss
     return loss
 
@@ -70,15 +70,14 @@ class TrainingModel(pl.LightningModule):
 
 #@title #Hyperparameters 
 def run_training():
-  name = 'DialogueRestyler' #@param {type: "string"}
-  lr = 1e-3 #@param
-  optimize_every = 10#@param
-  batch_size=10 #@param
+  name = 'Styler' #@param {type: "string"}
+  lr = 1e-6 #@param
+  optimize_every = 1#@param
+  batch_size=80 #@param
   patience=0 #@param
   epochs = 100 #@param
-  check_val_every_n_epoch = 0.5 #@param
-  model_con = lambda: DialogueRestyler(apply_back_translation=True)
-  dataset_con = lambda split, dim: StyleDialogueDataset(split, dim=dim)
+  model_con = DGSTPair
+  dataset_con = TrumpDataset
   model = TrainingModel(dataset_con, model_con, lr=lr, 
                       batch_size=batch_size, patience=patience)
   if os.path.exists(f'model.pt'):
@@ -86,7 +85,6 @@ def run_training():
     model.model.load_state_dict(torch.load(f'model.pt'))
   trainer = pl.Trainer(
       max_epochs=epochs,
-      check_val_every_n_epoch=check_val_every_n_epoch, 
       gpus=-1,
       accelerator='ddp',
       accumulate_grad_batches=optimize_every

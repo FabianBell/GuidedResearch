@@ -1,7 +1,7 @@
 import pandas as pd
 import random
 from torch.utils.data import Dataset
-from transformers import T5Tokenizer
+from transformers import BertTokenizerFast
 import numpy as np
 from collections import Counter
 import os
@@ -10,8 +10,33 @@ import torch
 
 STYLE_PATH = 'review_data'
 DIALOGUE_PATH = 'dialogue_dataset'
+DONALD_TRUMP = 'donald_trump'
+RESPONSE_PATH = 'response_dataset'
 
 CONTEXT_ID = 32109
+
+class TrumpDataset(Dataset):
+
+    def __init__(self, split):
+        with open(os.path.join(DONALD_TRUMP, f'{split}.txt'), 'r') as dfile:
+            self.trump = dfile.read().splitlines()
+        with open(os.path.join(RESPONSE_PATH, f'{split}.txt'), 'r') as dfile:
+            self.response = dfile.read().splitlines()
+        self.tokenizer = BertTokenizerFast.from_pretrained('bert-base-cased')
+
+    def __len__(self):
+        return max(len(self.trump), len(self.response))
+
+    def __getitem__(self, idx):
+        entry0 = self.response[idx % len(self.response)]
+        entry1 = self.trump[idx % len(self.trump)]
+        return entry0, entry1
+
+    def collate_batch(self, batch):
+        entry0, entry1 = zip(*batch)
+        batch0 = self.tokenizer(entry0, padding=True, return_tensors='pt')
+        batch1 = self.tokenizer(entry1, padding=True, return_tensors='pt')
+        return batch0, batch1
 
 class StyleDataset(Dataset):
     """
