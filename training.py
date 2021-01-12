@@ -44,7 +44,7 @@ class TrainingModel(pl.LightningModule):
     return self.get_dataloader('test', False)
 
   def configure_optimizers(self):
-    optimizer = AdamW(self.parameters(), lr=self.lr)
+    optimizer = AdamW(self.parameters(), lr=self.lr, weight_decay=1e-5)
     scheduler = ReduceLROnPlateau(optimizer, patience=self.patience, verbose=True)
     return {
         'optimizer' : optimizer,
@@ -71,9 +71,9 @@ class TrainingModel(pl.LightningModule):
 #@title #Hyperparameters 
 def run_training():
   name = 'Styler' #@param {type: "string"}
-  lr = 1e-6 #@param
+  lr = 1e-3 #@param
   optimize_every = 1#@param
-  batch_size=80 #@param
+  batch_size=40 #@param
   patience=0 #@param
   epochs = 100 #@param
   model_con = DGSTPair
@@ -87,7 +87,8 @@ def run_training():
       max_epochs=epochs,
       gpus=-1,
       accelerator='ddp',
-      accumulate_grad_batches=optimize_every
+      accumulate_grad_batches=optimize_every,
+      gradient_clip_val=1
       )
   trainer.fit(model)
 

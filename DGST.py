@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 class DGST(nn.Module):
 
@@ -19,8 +20,8 @@ class DGST(nn.Module):
         for i in range(data.shape[1]):
             out, ctx = self.decoder(inp, ctx)
             out = self.dense(out)
-            outputs.append()
-            inp = self.embedding(outputs.argmax(2))
+            outputs.append(out)
+            inp = self.embedding(out.argmax(2))
         outputs = torch.cat(outputs, dim=1)
         return outputs
 
@@ -46,21 +47,21 @@ class DGSTPair(nn.Module):
 
     def __init__(self, vocab_size=28996, vocab_min=106):
         super().__init__()
-        self.t0 = DGST(vocab_size)
-        self.t1 = DGST(vocab_size)
-        self.vocab_size = vocab_size,
+        self.t0 = DGST()
+        self.t1 = DGST()
+        self.vocab_size = vocab_size
         self.vocab_min = vocab_min
     
-    def noise(self, data, p=0.3):
-        data = data.clone()
-        mask = torch.rand_like(data) < p
-        data[mask] = torch.randint(self.vocab_min, self.vocab_size-1, (mask.sum(),), device=data.device)
-        return data
-
     def loss(self, data, target):
         loss = F.cross_entropy(data.view(-1, data.shape[-1]), target.view(-1), reduction="none")
         loss = loss.sum()
         return loss
+    
+    def noise(self, data, p=0.3):
+        data = data.clone()
+        mask = torch.rand(*data.shape) < p
+        data[mask] = torch.randint(self.vocab_min, self.vocab_size-1, (mask.sum(),), device=data.device)
+        return data
 
     def forward(self, data0, data1):
         data0_n = self.noise(data0)
@@ -68,11 +69,11 @@ class DGSTPair(nn.Module):
         
         data0_1 = self.t1(data0)
         data0_1 = self.noise(data0_1.argmax(2))
-        data_0_1_0 = self.t0(data0_1)
+        data0_1_0 = self.t0(data0_1)
 
         data1_0 = self.t0(data1)
         data1_0 = self.noise(data1_0.argmax(2))
-        data_1_0_1 = self.t1(data1_0)
+        data1_0_1 = self.t1(data1_0)
 
         l_t = self.loss(data0_1_0, data0) + self.loss(data1_0_1, data1)
         

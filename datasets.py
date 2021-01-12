@@ -23,6 +23,8 @@ class TrumpDataset(Dataset):
         with open(os.path.join(RESPONSE_PATH, f'{split}.txt'), 'r') as dfile:
             self.response = dfile.read().splitlines()
         self.tokenizer = BertTokenizerFast.from_pretrained('bert-base-cased')
+        self.vocab_size = 28996 
+        self.vocab_min = 106
 
     def __len__(self):
         return max(len(self.trump), len(self.response))
@@ -31,11 +33,11 @@ class TrumpDataset(Dataset):
         entry0 = self.response[idx % len(self.response)]
         entry1 = self.trump[idx % len(self.trump)]
         return entry0, entry1
-
+    
     def collate_batch(self, batch):
         entry0, entry1 = zip(*batch)
-        batch0 = self.tokenizer(entry0, padding=True, return_tensors='pt')
-        batch1 = self.tokenizer(entry1, padding=True, return_tensors='pt')
+        batch0 = self.tokenizer(list(entry0), padding=True, return_tensors='pt').input_ids
+        batch1 = self.tokenizer(list(entry1), padding=True, return_tensors='pt').input_ids
         return batch0, batch1
 
 class StyleDataset(Dataset):
