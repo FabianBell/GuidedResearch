@@ -18,10 +18,11 @@ CONTEXT_ID = 32109
 class TrumpDataset(Dataset):
 
     def __init__(self, split):
+        # use string length as an approximation of the token sequence length
         with open(os.path.join(DONALD_TRUMP, f'{split}.txt'), 'r') as dfile:
-            self.trump = dfile.read().splitlines()
+            self.trump = [line for line in dfile.read().splitlines() if len(line) < 512]
         with open(os.path.join(RESPONSE_PATH, f'{split}.txt'), 'r') as dfile:
-            self.response = dfile.read().splitlines()
+            self.response = [line for line in dfile.read().splitlines() if len(line) < 512]
         self.tokenizer = BertTokenizerFast.from_pretrained('bert-base-cased')
         self.vocab_size = 28996 
         self.vocab_min = 106
