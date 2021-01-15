@@ -72,7 +72,7 @@ class TrainingModel(pl.LightningModule):
 def run_training():
   name = 'Styler' #@param {type: "string"}
   lr = 1e-3 #@param
-  optimize_every = 2#@param
+  optimize_every = 8#@param
   batch_size=32 #@param
   patience=0 #@param
   epochs = 100 #@param
