@@ -1,4 +1,4 @@
-from transformers import T5Tokenizer, logging
+from transformers import T5Tokenizer, logging, BertTokenizerFast
 logging.set_verbosity_error()
 import re
 import torch
@@ -6,6 +6,7 @@ import pandas as pd
 import random
 
 from model import *
+from DGST import DGST
 
 class Agent:
     
@@ -28,9 +29,10 @@ class Agent:
     def __init__(self):
         self.solist = DialogueRestyler()
         self.solist.load_state_dict(torch.load('solist.pt'))
-        self.textsettr = DialogueRestyler()
-        self.textsettr.load_state_dict(torch.load('textsettr.pt'))
+        self.dgst = DGST()
+        self.dgst.load_state_dict(torch.load('dgst.pt'))
         self.tokenizer = self._get_tokenizer()
+        self.dgst_tokenizer = BertTokenizerFast.from_pretrained('bert-base-cased')
         self.bs_pattern = re.compile(r'[^{]*{\s\s?(?P<data>[^}]*)\s}(\squery\s{\s(?P<query>.*)\s})?\s<EOB>\s*')
         self.argument_pattern = re.compile(r':set\s(?P<arg>\w*)=(?P<argv>\w*)')
         self.kb = pd.read_pickle('kb.pkl')
@@ -77,23 +79,14 @@ class Agent:
         beliefe_state = self.tokenizer.decode(pred[0])
         return beliefe_state
 
-    def _get_modified_response(self, response, source, target):
-        print('S:', source)
-        print('T:', target)
-        input_ids = torch.tensor([[self.CONTEXT_ID] + self.tokenizer(response).input_ids])
-        source_ids, source_mask = self.tokenizer(source, return_tensors='pt').values()
-        target_ids, target_mask = self.tokenizer(target, return_tensors='pt').values()
-        pred = self.textsettr.generate(
-            target_ids,
-            target_mask,
-            input_ids,
-            torch.ones(input_ids.shape[0], input_ids.shape[1] + 1, dtype=torch.long),
-            torch.tensor([[0.2, 0.4, 0.2, 0.4] + [0.]* 508]),
-            source_ids,
-            source_mask,
-            max_length=512
-        )
-        response = self.tokenizer.decode(pred[0])
+    def _get_modified_response(self, response):
+        """
+        tokens = self.dgst_tokenizer(response, return_tensors='pt').input_ids
+        pred = self.dgst(tokens, length=100)
+        pred = pred[0].argmax(-1)
+        pred = pred[pred >= 106]
+        response = self.dgst_tokenizer.decode(pred)
+        """
         return response
 
     def write_okay(self, seq):
@@ -111,8 +104,6 @@ class Agent:
 
     def __call__(self):
         history = ''
-        target = ''
-        source = ''
         while True:
             user = self.get_in()
             match = self.argument_pattern.fullmatch(user)
@@ -130,13 +121,10 @@ class Agent:
                 continue
             if user == 'restart':
                 history = ''
-                target = ''
-                source = ''
                 self.write_okay('\n## Restart agent\n')
                 continue
             if user == 'close':
                 break
-            target += ' ' + user
             history += 'user: ' + user
             beliefe_state = self._get_solist_result(history)
             #print('Beliefe state:', beliefe_state)
@@ -144,10 +132,9 @@ class Agent:
             kb_data = self.db(bs_data)
             intermediate = ''.join([history, beliefe_state, kb_data])
             response = self._get_solist_result(intermediate)
-            print('Response:', response)
-            source += ' ' + response
+            #print('Response:', response)
             history += ' assistant: ' + response
-            response = self._get_modified_response(response, source, target)
+            response = self._get_modified_response(response)
             self.write_out(response)
 
 agent = Agent()

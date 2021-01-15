@@ -1,0 +1,43 @@
+#!/usr/bin/env python
+import os
+import logging
+import argparse
+import time
+
+import torch
+
+def main(args):
+    data = torch.load(args.model_checkpoint, map_location=torch.device('cpu'))
+    state_dict = {k[3:] : v for k, v in data.items() if 't1' in k}
+    torch.save(state_dict, 'dgst.pt')
+
+def dir_path(path):
+    """
+    Type check for argparse
+    """
+    if os.path.isdir(path):
+        return path
+    raise NotADirectoryError(path)
+
+def file_path(path):
+    """
+    Type check of argparse
+    """
+    if os.path.isfile(path):
+        return path
+    raise FileNotFoundError(path)
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Extracts the correct model from the checkpoint')
+    
+    parser.add_argument('--verbose', '-v', dest='verbose', action='store_true')
+    parser.add_argument('model_checkpoint', type=file_path, help='model checkpoint (.pt)')
+
+    args = parser.parse_args()
+    if args.verbose is True:
+        logging.basicConfig(level=logging.INFO)
+    start = time.time()
+    logging.info('Start.')
+    main(args)
+    end = time.time()
+    logging.info('Finished. Time: {}'.format(end-start))

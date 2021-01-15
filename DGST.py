@@ -12,12 +12,12 @@ class DGST(nn.Module):
         self.dense = nn.Linear(hidden_size*2, vocab_size, bias=False)
         self.vocab_size = vocab_size
 
-    def forward(self, data):
+    def forward(self, data, length=None):
         embedding = self.embedding(data)
+        _, ctx = self.encoder(embedding)
         inp = embedding[:, :1, :]
-        ctx = None
         outputs = []
-        for i in range(data.shape[1]):
+        for i in range(data.shape[1] if length is None else length):
             out, ctx = self.decoder(inp, ctx)
             out = self.dense(out)
             outputs.append(out)
@@ -53,8 +53,7 @@ class DGSTPair(nn.Module):
         self.vocab_min = vocab_min
     
     def loss(self, data, target):
-        loss = F.cross_entropy(data.view(-1, data.shape[-1]), target.view(-1), reduction="none")
-        loss = loss.sum()
+        loss = F.cross_entropy(data.view(-1, data.shape[-1]), target.view(-1))
         return loss
     
     def noise(self, data, p=0.3):
@@ -73,7 +72,7 @@ class DGSTPair(nn.Module):
 
         data1_0 = self.t0(data1)
         data1_0 = self.noise(data1_0.argmax(2))
-        data1_0_1 = self.t1(data1_0)
+        data1_0_1 = self.t1(data1_0) 
 
         l_t = self.loss(data0_1_0, data0) + self.loss(data1_0_1, data1)
         
@@ -82,5 +81,5 @@ class DGSTPair(nn.Module):
 
         l_c = self.loss(data0_n_0, data0) + self.loss(data1_n_1, data1)
 
-        loss = l_t + l_c
+        loss = (l_t + l_c) / 4
         return ModelOutput(logits=data0_1, loss=loss)
