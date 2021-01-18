@@ -13,7 +13,7 @@ class DGST_LSTM(nn.Module):
         self.dense = nn.Linear(hidden_size*2, vocab_size, bias=False)
         self.vocab_size = vocab_size
 
-    def forward(self, data, length=None):
+    def forward(self, data, *args, length=None):
         embedding = self.embedding(data)
         _, ctx = self.encoder(embedding)
         inp = embedding[:, :1, :]
@@ -71,8 +71,8 @@ class DGSTPair(nn.Module):
 
     def __init__(self, vocab_size=28996, vocab_min=106):
         super().__init__()
-        self.t0 = DGST_Transformer()
-        self.t1 = DGST_Transformer()
+        self.t0 = DGST_LSTM()  #DGST_Transformer()
+        self.t1 = DGST_LSTM()  #DGST_Transformer()
         self.vocab_size = vocab_size
         self.vocab_min = vocab_min
     
@@ -80,7 +80,7 @@ class DGSTPair(nn.Module):
         loss = F.cross_entropy(data.view(-1, data.shape[-1]), target.view(-1))
         return loss
     
-    def noise(self, data, p=0.3):
+    def noise(self, data, p=0.03):
         data = data.clone()
         mask = torch.rand(*data.shape) < p
         data[mask] = torch.randint(self.vocab_min, self.vocab_size-1, (mask.sum(),), device=data.device)
