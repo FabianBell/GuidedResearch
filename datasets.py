@@ -37,9 +37,9 @@ class TrumpDataset(Dataset):
     
     def collate_batch(self, batch):
         entry0, entry1 = zip(*batch)
-        batch0 = self.tokenizer(list(entry0), padding=True, return_tensors='pt').input_ids
-        batch1 = self.tokenizer(list(entry1), padding=True, return_tensors='pt').input_ids
-        return batch0, batch1
+        batch0 = self.tokenizer(list(entry0), padding=True, return_tensors='pt')
+        batch1 = self.tokenizer(list(entry1), padding=True, return_tensors='pt')
+        return batch0.input_ids, batch0.attention_mask, batch1.input_ids, batch1.input_ids
 
 class StyleDataset(Dataset):
     """
