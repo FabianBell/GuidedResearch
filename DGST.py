@@ -35,7 +35,7 @@ class DGST_Transformer(nn.Module):
                                                  add_cross_attention=True, return_dict=True)
         self.lm_head = nn.Linear(self.decoder.config.hidden_size, self.decoder.config.vocab_size, bias=False)
 
-    def forward(self, input_ids, attention_mask, length=None):
+    def forward(self, input_ids, attention_mask=None, length=None):
         encoding = self.encoder(input_ids=input_ids, attention_mask=attention_mask)
         outputs = []
         inp = encoding.pooler_output.unsqueeze(1)
@@ -90,16 +90,13 @@ class DGSTPair(nn.Module):
         data0_n = self.noise(data0)
         data1_n = self.noise(data1)
        
-        data0_full_mask = torch.ones(*data0.shape)
-        data1_full_mask = torch.ones(*data1.shape)
-
         data0_1 = self.t1(data0, data0_mask)
         data0_1 = self.noise(data0_1.argmax(2))
-        data0_1_0 = self.t0(data0_1, data0_full_mask)
+        data0_1_0 = self.t0(data0_1)
 
         data1_0 = self.t0(data1, data1_mask)
         data1_0 = self.noise(data1_0.argmax(2))
-        data1_0_1 = self.t1(data1_0, data1_full_mask) 
+        data1_0_1 = self.t1(data1_0) 
 
         l_t = self.loss(data0_1_0, data0) + self.loss(data1_0_1, data1)
         
