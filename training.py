@@ -77,8 +77,8 @@ def run_training():
   patience=0 #@param
   epochs = 100 #@param
   check_val_every_n_epoch = 0.5 #@param
-  model_con = lambda: DialogueRestyler(apply_back_translation=True)
-  dataset_con = lambda split, dim: StyleDialogueDataset(split, dim=dim)
+  model_con = Solist
+  dataset_con = DialogueDataset
   model = TrainingModel(dataset_con, model_con, lr=lr, 
                       batch_size=batch_size, patience=patience)
   if os.path.exists(f'model.pt'):
