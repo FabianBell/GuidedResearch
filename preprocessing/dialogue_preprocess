@@ -1,0 +1,229 @@
+#!/usr/bin/env python
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
+import logging
+import argparse
+import time
+
+import pandas as pd
+from bellparallel import parallel
+import json
+from transformers import T5Tokenizer, logging as tr_logging
+tr_logging.set_verbosity_error()
+
+EOB = '<EOB>'
+BELIEF_PREFIX = ' => Belief State : Movie Tickets { '
+KB_PREFIX = ' DB: '
+EOKB = '<EOKB>'
+QUERY = 'query'
+
+global tokenizer 
+
+class Utterance:
+    """
+    Abstraction of an utterance in a dialogue
+    """
+    
+    def __init__(self, speaker, text, index, conv_id, segments=None, 
+                 apis=None, prev_utterance=None):
+        self.speaker = speaker.lower()
+        self.text = text
+        self.segments = self._parse_segments(segments)
+        self.apis = apis
+        self.prev_utterance = prev_utterance
+        self.idx = conv_id + '-' + str(index)
+    
+    def _parse_segments(self, segments):
+        """
+        Extracts the useful information from the given segments dict.
+        """
+        if segments is None:
+            return {}
+        segment_dict = {}
+        for segment in segments:
+            text = segment['text']
+            for tag in segment['annotations']:
+                assert list(tag.keys()) == ['name'], list(tag.keys())
+                segment_dict[tag['name']] = text
+        return segment_dict
+    
+    def get_segments(self):
+        """
+        Get the joined segments from the current and 
+        previous utterances 
+        """
+        segments = {}
+        if self.prev_utterance is not None:
+            segments.update(**self.prev_utterance.get_segments())
+        segments.update(**self.segments)
+        return segments
+    
+    def get_prev_kb(self):
+        """
+        Get the previous knowledge base representation.
+        See get_kb
+        """
+        assert self.prev_utterance is not None
+        return self.prev_utterance.get_kb()
+    
+    def get_kb(self):
+        """
+        Get the fake knowledge base entry representation for the 
+        current utterance
+        """
+        if self.apis is not None:
+            seq = []
+            for call in self.apis:
+                name = call['name']
+                resp = '; '.join([f'{k} = {v}' for k, v in call['response'].items()])
+                seq.append(name + ' { ' + resp + ' }')
+            seq= ' '.join(seq)
+        else:
+            seq = ''
+        return KB_PREFIX + seq + ' ' + EOKB
+    
+    def get_prev_belief_state(self):
+        """
+        Get the belief state of the utterance history without
+        the current utterance
+        """
+        assert self.prev_utterance is not None
+        return self.prev_utterance.get_belief_state()[0]
+    
+    def get_belief_state(self):
+        """
+        Get the belief state of the utterance history including the 
+        current utterance
+        """
+        if self.apis is not None:
+            query = QUERY + ' { '
+            query += '; '.join([call['name'] for call in self.apis])
+            query += ' } '
+        else:
+            query = ''
+        segments = self.get_segments()
+        seq = '; '.join([f'{k} = {v}' for k, v in segments.items()])
+        seq = BELIEF_PREFIX + seq + ' } ' + query + EOB
+        return seq, segments
+    
+    def get_prev_history(self):
+        """
+        Get the dialogue history without the current utterance
+        """
+        assert self.prev_utterance is not None
+        return self.prev_utterance.get_history()
+    
+    def get_history(self):
+        """
+        Get the dialogue history including the current utterance
+        """
+        history = f'{self.speaker}: {self.text}'
+        if self.prev_utterance is not None:
+            history = self.prev_utterance.get_history() + ' ' + history
+        return history
+    
+    def get_full_history(self):
+        """
+        Get the concatenation of the previous history, belief_state
+        and knowledge base entry
+        """
+        return self.get_prev_history() + self.get_prev_belief_state() + self.get_prev_kb()
+    
+    def get_response(self):
+        """
+        Get the current speakers response
+        """
+        return self.text
+    
+    def get_task(self):
+        """
+        Get the task derived by the current utterance.
+        User:
+            Input: Dialogue History
+            Target: Belief State
+        Assistant:
+            Input: Full history
+            Target: Response
+        """
+        assert self.speaker in ['user', 'assistant']
+        if self.speaker == 'user':
+            inp = self.get_history()
+            target, segments = self.get_belief_state()
+            task = 'belief_state'
+        else:
+            inp = self.get_full_history()
+            target = self.get_response()
+            task = 'response'
+            segments = self.segments
+        return inp, target, task, segments
+    
+    def is_valid(self):
+        """
+        Checks if the utterances can be used for training
+        """
+        return (self.speaker == 'assistant' and self.prev_utterance is not None) or self.speaker == 'user'
+
+@parallel(tag='Preprocessing')
+def preprocess(entry):
+    utterances = []
+    dialog = entry.utterances
+    prev_utterance = None
+    for utterance_dict in dialog:
+        utterance = Utterance(**utterance_dict, prev_utterance=prev_utterance,
+                             conv_id=entry.conversation_id)
+        prev_utterance = utterance
+        utterances.append(utterance)
+    utterances = [utterance.get_task() for utterance in utterances if utterance.is_valid()]
+    utterances = [(tokenizer(inp).input_ids, tokenizer(target).input_ids, inp, target, *args) for inp, target, *args in utterances]
+    utterances = [(inp, target, *args) for inp, target, *args in utterances if len(inp) < 512 and len(target) < 512]
+    return utterances
+
+def main(args):
+    data = pd.read_json(args.data)
+    global tokenizer 
+    tokenizer = T5Tokenizer.from_pretrained('t5-small', 
+        additional_special_tokens=[EOB, BELIEF_PREFIX, EOB, KB_PREFIX, EOKB, '{', '}', 'assistant:', 'user:', '<CTX>', QUERY, *[f'<extra_id_{i}>' for i in range(100)]])   
+    utterances = preprocess(data.iloc, length=len(data))
+    merged = []
+    for utterance in utterances:
+        merged.extend(utterance)
+    if args.output_type is None and args.output_type == 'train':
+        merged = [elem[:2] for elem in merged]
+        output_data = pd.DataFrame(merged, columns=['input', 'target'])
+        output_data.to_pickle('output.pkl')
+    else:
+        merged = [elem[2:] for elem in merged]
+        with open('output.json', 'w') as data_file:
+            json.dump(merged, data_file)
+
+def dir_path(path):
+    """
+    Type check for argparse
+    """
+    if os.path.isdir(path):
+        return path
+    raise NotADirectoryError(path)
+
+def file_path(path):
+    """
+    Type check of argparse
+    """
+    if os.path.isfile(path):
+        return path
+    raise FileNotFoundError(path)
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Preprocess taskmaster data')
+    
+    parser.add_argument('--verbose', '-v', dest='verbose', action='store_true')
+    parser.add_argument('data', type=file_path, help='Data path (.json)')
+    parser.add_argument('-t', dest='output_type', choices=['train', 'val'], help='Output type: train (used for training), val (used for validation)')
+
+    args = parser.parse_args()
+    if args.verbose is True:
+        logging.basicConfig(level=logging.INFO)
+    start = time.time()
+    logging.info('Start.')
+    main(args)
+    end = time.time()
+    logging.info('Finished. Time: {}'.format(end-start))

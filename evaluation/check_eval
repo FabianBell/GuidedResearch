@@ -1,0 +1,78 @@
+#!/usr/bin/env python
+import os
+import logging
+import argparse
+import time
+
+import pandas as pd
+from bellparallel import parallel
+import re
+
+pattern = re.compile(r'[^{]*{\s\s?(?P<data>[^}]*)\s}(\squery\s{\s(?P<query>.*)\s})?\s<EOB>\s*')
+
+@parallel(tag='Evaluate')
+def evaluate(entry):
+    if entry.task == 'belief_state':
+        if len(entry['keys']) == 0:
+            return
+        prediction = entry.prediction
+        match = pattern.fullmatch(prediction)
+        if match is None:
+            return 0
+        bs = {k: v for k, v in [pair for pair in [elem.split(' = ') for elem in match.group('data').split('; ') if elem != ''] if len(pair) == 2]}
+        score = 0
+        for key in entry['keys']:
+            if key in bs:
+                if bs[key] == entry['keys'][key]:
+                    score += 1
+        score = score / len(entry['keys'])
+        return score
+    elif entry.task == 'response':
+        if len(entry['keys']) == 0:
+            return
+        score = 0
+        for key in entry['keys']:
+            if entry['keys'][key] in entry.prediction:
+                score += 1
+        score = score / len(entry['keys'])
+        return score
+    else:
+        raise ValueError(f'Invalid task type: {entry.task}')
+
+def main(args):
+    data = pd.read_json(args.data)
+    out = evaluate(data.iloc, length=len(data))
+    out = [(*args, score) for args, score in zip(data.values, out)]
+    df = pd.DataFrame(out, columns=[*data.columns, 'inform_success'])
+    df.to_json('result.json')
+
+def dir_path(path):
+    """
+    Type check for argparse
+    """
+    if os.path.isdir(path):
+        return path
+    raise NotADirectoryError(path)
+
+def file_path(path):
+    """
+    Type check of argparse
+    """
+    if os.path.isfile(path):
+        return path
+    raise FileNotFoundError(path)
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Evaluate model results')
+    
+    parser.add_argument('--verbose', '-v', dest='verbose', action='store_true')
+    parser.add_argument('data', type=file_path, help='Data path (.json)')
+
+    args = parser.parse_args()
+    if args.verbose is True:
+        logging.basicConfig(level=logging.INFO)
+    start = time.time()
+    logging.info('Start.')
+    main(args)
+    end = time.time()
+    logging.info('Finished. Time: {}'.format(end-start))
