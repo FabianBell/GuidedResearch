@@ -9,7 +9,7 @@ DIALOGUE_PATH = 'dialogue_dataset'
 class DialogueDataset(Dataset):
 
     def __init__(self, split):
-        self.data = pd.read_pickle(os.path.join(DIALOGUE_PATH, f'{split}.pkl'))[['input', 'target']]
+        self.data = pd.read_json(os.path.join(DIALOGUE_PATH, f'{split}.json'))[['input', 'target']]
 
     def __len__(self):
         return len(self.data)
