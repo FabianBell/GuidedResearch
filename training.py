@@ -27,7 +27,7 @@ class TrainingModel(pl.LightningModule):
     """
     Creates the dataloader for the given split (['train', 'val', 'test'])
     """
-    dataset = self.dataset_con(split, self.model.model.config.d_model) 
+    dataset = self.dataset_con(split) 
     dataloader = DataLoader(dataset, batch_size=self.batch_size, 
                             shuffle=shuffle, collate_fn=dataset.collate_batch, 
                             num_workers=4)
@@ -52,15 +52,15 @@ class TrainingModel(pl.LightningModule):
     }
 
   def base_step(self, batch):
-    context, context_mask, corrupted, corrupted_mask, target, prefix = batch
-    out = self(context, context_mask, corrupted, corrupted_mask, target, prefix)
+    input_ids, target = batch
+    out = self(input_ids, target)
     loss = out.loss
     return loss
 
   def training_step(self, batch, batch_nb):
     loss = self.base_step(batch)
     self.log('train_loss', loss)
-    if batch_nb % 1000 == 0 and torch.distributed.get_rank() == 0:
+    if batch_nb % 1000 == 0 and batch_nb != 0: #and torch.distributed.get_rank() == 0:
         # save in master
         print('Save model')
         torch.save(self.model.state_dict(), 'model.pt')
@@ -87,8 +87,8 @@ def run_training():
   trainer = pl.Trainer(
       max_epochs=epochs,
       check_val_every_n_epoch=check_val_every_n_epoch, 
-      gpus=-1,
-      accelerator='ddp',
+      #gpus=-1,
+      #accelerator='ddp',
       accumulate_grad_batches=optimize_every
       )
   trainer.fit(model)

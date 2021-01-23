@@ -10,7 +10,6 @@ class DialogueDataset(Dataset):
 
     def __init__(self, split):
         self.data = pd.read_pickle(os.path.join(DIALOGUE_PATH, f'{split}.pkl'))[['input', 'target']]
-        self.tokenizer = T5TokenizerFast.from_pretrained('t5-small')
 
     def __len__(self):
         return len(self.data)
@@ -27,7 +26,7 @@ class DialogueDataset(Dataset):
         return seq
         
 
-    def batch(self, batch):
+    def collate_batch(self, batch):
         inp, tar = zip(*batch)
         inp = DialogueDataset._make_tensor(inp, 0)
         tar = DialogueDataset._make_tensor(tar, -100)

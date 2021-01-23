@@ -1,4 +1,4 @@
-nn
+import torch.nn as nn
 from transformers import T5ForConditionalGeneration
 
 class Solist(nn.Module):
@@ -8,8 +8,8 @@ class Solist(nn.Module):
         self.model = T5ForConditionalGeneration.from_pretrained('t5-small',
                                                             return_dict=True)
 
-    def forward(self, input_ids, input_mask, target):
-        out = self.model(input_ids=input_ids, attention_mask=input_mask, labels=target)
+    def forward(self, input_ids, target):
+        out = self.model(input_ids=input_ids, labels=target)
         return out
     
     def generate(self, input_ids, input_mask, *args, **kwargs):
