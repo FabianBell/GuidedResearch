@@ -6,7 +6,7 @@ import pandas as pd
 import random
 
 from model import *
-from DGST import DGST
+from DGST import DGST_LSTM as DGST
 
 class Agent:
     
@@ -80,13 +80,11 @@ class Agent:
         return beliefe_state
 
     def _get_modified_response(self, response):
-        """
         tokens = self.dgst_tokenizer(response, return_tensors='pt').input_ids
         pred = self.dgst(tokens, length=100)
         pred = pred[0].argmax(-1)
         pred = pred[pred >= 106]
         response = self.dgst_tokenizer.decode(pred)
-        """
         return response
 
     def write_okay(self, seq):
@@ -132,7 +130,7 @@ class Agent:
             kb_data = self.db(bs_data)
             intermediate = ''.join([history, beliefe_state, kb_data])
             response = self._get_solist_result(intermediate)
-            #print('Response:', response)
+            print('Response:', response)
             history += ' assistant: ' + response
             response = self._get_modified_response(response)
             self.write_out(response)
