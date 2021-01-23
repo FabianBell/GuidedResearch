@@ -4,6 +4,8 @@ __pycache__
 *.pt
 # data
 *.pkl
+*.tar.gz
+*.txt
 # datasets
 dialogue_dataset/
 review_data/
