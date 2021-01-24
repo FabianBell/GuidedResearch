@@ -60,7 +60,7 @@ class TrainingModel(pl.LightningModule):
   def training_step(self, batch, batch_nb):
     loss = self.base_step(batch)
     self.log('train_loss', loss)
-    if batch_nb % 1000 == 0 and batch_nb != 0: and torch.distributed.get_rank() == 0:
+    if batch_nb % 1000 == 0 and batch_nb != 0 and torch.distributed.get_rank() == 0:
         # save in master
         print('Save model')
         torch.save(self.model.state_dict(), 'model.pt')
