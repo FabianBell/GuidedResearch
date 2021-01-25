@@ -18,7 +18,7 @@ class Soloist(nn.Module):
 
     def forward(self, input_ids, target, corrupted_ids, corrupted_target):
         out = self.model(input_ids=input_ids, labels=target)
-        embedding = self.model.encoder(input_ids=corrupted_ids).last_hidden_state[:, -1, :]
+        embedding = self.model.encoder(input_ids=corrupted_ids).last_hidden_state[:, 0, :]
         pred = self.classifer(embedding)[:, 0]
         loss = self.classifier_criterion(pred, corrupted_target)
         return out.loss + loss
