@@ -52,9 +52,7 @@ class TrainingModel(pl.LightningModule):
     }
 
   def base_step(self, batch):
-    input_ids, target = batch
-    out = self(input_ids, target)
-    loss = out.loss
+    loss = self(*batch)
     return loss
 
   def training_step(self, batch, batch_nb):
