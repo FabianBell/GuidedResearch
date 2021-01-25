@@ -1,0 +1,42 @@
+#!/usr/bin/env python
+import os
+import logging
+import argparse
+import time
+
+import torch
+
+def main(args):
+    model = torch.load(args.model, map_location=torch.device('cpu'))
+    torch.save(model, args.model)
+
+def dir_path(path):
+    """
+    Type check for argparse
+    """
+    if os.path.isdir(path):
+        return path
+    raise NotADirectoryError(path)
+
+def file_path(path):
+    """
+    Type check of argparse
+    """
+    if os.path.isfile(path):
+        return path
+    raise FileNotFoundError(path)
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='<TODO>')
+    
+    parser.add_argument('--verbose', '-v', dest='verbose', action='store_true')
+    parser.add_argument('model', type=file_path, help='model path (.pt)')
+
+    args = parser.parse_args()
+    if args.verbose is True:
+        logging.basicConfig(level=logging.INFO)
+    start = time.time()
+    logging.info('Start.')
+    main(args)
+    end = time.time()
+    logging.info('Finished. Time: {}'.format(end-start))

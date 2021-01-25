@@ -23,7 +23,6 @@ class Soloist(nn.Module):
         loss = self.classifier_criterion(pred, corrupted_target)
         return out.loss + loss
   
-    def generate(self, input_ids, input_mask, *args, **kwargs):
-      pred = self.model.generate(input_ids=input_ids, 
-                                 attention_mask=input_mask, **kwargs)
+    def generate(self, input_ids, *args, **kwargs):
+      pred = self.model.generate(input_ids=input_ids, *args, **kwargs)
       return pred
