@@ -75,7 +75,7 @@ def run_training():
   patience=0 #@param
   epochs = 100 #@param
   check_val_every_n_epoch = 0.5 #@param
-  model_con = Solist
+  model_con = Soloist
   dataset_con = DialogueDataset
   model = TrainingModel(dataset_con, model_con, lr=lr, 
                       batch_size=batch_size, patience=patience)

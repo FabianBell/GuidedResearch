@@ -1,7 +1,7 @@
 import torch.nn as nn
 from transformers import T5ForConditionalGeneration
 
-class Solist(nn.Module):
+class Soloist(nn.Module):
 
     def __init__(self, dropout=0.3):
         super().__init__()

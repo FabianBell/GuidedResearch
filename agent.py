@@ -62,7 +62,7 @@ class Agent:
             resp = ''
         return f' DB: {resp} <EOKB>'
 
-    def _get_solist_result(self, inp):
+    def _get_soloist_result(self, inp):
         input_ids = self.tokenizer(inp, return_tensors='pt').input_ids
         pred = self.model.generate(
             torch.zeros(1, 1, dtype=torch.long),
@@ -134,12 +134,12 @@ class Agent:
                 break
             target += user
             history += 'user: ' + user
-            beliefe_state = self._get_solist_result(history)
+            beliefe_state = self._get_soloist_result(history)
             #print('Beliefe state:', beliefe_state)
             bs_data = self._get_bs_dict(beliefe_state)
             kb_data = self.db(bs_data)
             intermediate = ''.join([history, beliefe_state, kb_data])
-            response = self._get_solist_result(intermediate)
+            response = self._get_soloist_result(intermediate)
             print('Response:', response)
             source += ' ' + response
             history += ' assistant: ' + response
