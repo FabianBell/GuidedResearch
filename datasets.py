@@ -54,7 +54,9 @@ class DialogueDataset(Dataset):
             corrupted.append(inp[i+corrupted_size] + seq)
             corrupted_target.append(1 if replaced is True else 0)
         corrupted_target = torch.tensor(corrupted_target).float()
-        # cannot resonably filter the data that could yield sequences that have over 512 tokens here
-        # instead we will just clip the data 
-        corrupted_ids = self.tokenizer(corrupted, padding=True, return_tensors='pt').input_ids[:, 512]
+        corrupted_ids = self.tokenizer(corrupted, padding=True, return_tensors='pt').input_ids
+        if corrupted_ids.shape[-1] > 512:
+            # cannot resonably filter the data that could yield sequences that have over 512 tokens here
+            # instead we will just clip the data 
+            corrupted_ids = corrupted_ids[:, :512]
         return input_ids, target_ids, corrupted_ids, corrupted_target
