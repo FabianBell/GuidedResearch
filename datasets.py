@@ -2,7 +2,7 @@ import pandas as pd
 import torch
 from torch.utils.data import Dataset
 import os
-from transformers import T5TokenizerFast
+from transformers import T5Tokenizer
 import random
 
 DIALOGUE_PATH = 'dialogue_dataset'
@@ -17,7 +17,7 @@ class DialogueDataset(Dataset):
 
     def __init__(self, split):
         self.data = pd.read_json(os.path.join(DIALOGUE_PATH, f'{split}.json'))[['input', 'target', 'segments']]
-        self.tokenizer = tokenizer = T5TokenizerFast.from_pretrained('t5-small',
+        self.tokenizer = tokenizer = T5Tokenizer.from_pretrained('t5-small',
             additional_special_tokens=[EOB, BELIEF_PREFIX, EOB, KB_PREFIX, EOKB, '{', '}', 'assistant:', 'user:', 
             '<CTX>', QUERY, *[f'<extra_id_{i}>' for i in range(100)]])
 
@@ -54,5 +54,7 @@ class DialogueDataset(Dataset):
             corrupted.append(inp[i+corrupted_size] + seq)
             corrupted_target.append(1 if replaced is True else 0)
         corrupted_target = torch.tensor(corrupted_target).float()
-        corrupted_ids = self.tokenizer(corrupted, padding=True, return_tensors='pt').input_ids
+        # cannot resonably filter the data that could yield sequences that have over 512 tokens here
+        # instead we will just clip the data 
+        corrupted_ids = self.tokenizer(corrupted, padding=True, return_tensors='pt').input_ids[:, 512]
         return input_ids, target_ids, corrupted_ids, corrupted_target
