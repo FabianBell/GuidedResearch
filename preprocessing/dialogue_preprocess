@@ -120,6 +120,7 @@ class Utterance:
         history = f'{self.speaker}: {self.text}'
         if self.prev_utterance is not None:
             history = self.prev_utterance.get_history() + ' ' + history
+            raise Exception(history)
         return history
     
     def get_full_history(self):
@@ -175,7 +176,7 @@ def preprocess(entry):
         utterances.append(utterance)
     utterances = [utterance.get_task() for utterance in utterances if utterance.is_valid()]
     utterances = [(tokenizer(inp).input_ids, tokenizer(target).input_ids, inp, target, *args) for inp, target, *args in utterances]
-    utterances = [(inp, target, *args) for inp, target, *args in utterances if len(inp) < 512 and len(target) < 512]
+    utterances = [args for inp, target, *args in utterances if len(inp) + len(target) < 505]
     return utterances
 
 def main(args):
@@ -187,14 +188,8 @@ def main(args):
     merged = []
     for utterance in utterances:
         merged.extend(utterance)
-    if args.output_type is None and args.output_type == 'train':
-        merged = [elem[:2] for elem in merged]
-        output_data = pd.DataFrame(merged, columns=['input', 'target'])
-        output_data.to_pickle('output.pkl')
-    else:
-        merged = [elem[2:] for elem in merged]
-        with open('output.json', 'w') as data_file:
-            json.dump(merged, data_file)
+    output_data = pd.DataFrame(merged, columns=['input', 'target', 'task', 'segments'])
+    output_data.to_json('output.json')
 
 def dir_path(path):
     """
@@ -217,7 +212,6 @@ if __name__ == '__main__':
     
     parser.add_argument('--verbose', '-v', dest='verbose', action='store_true')
     parser.add_argument('data', type=file_path, help='Data path (.json)')
-    parser.add_argument('-t', dest='output_type', choices=['train', 'val'], help='Output type: train (used for training), val (used for validation)')
 
     args = parser.parse_args()
     if args.verbose is True:
