@@ -12,8 +12,9 @@ pattern = re.compile(r'[^{]*{\s\s?(?P<data>[^}]*)\s}(\squery\s{\s(?P<query>.*)\s
 
 @parallel(tag='Evaluate')
 def evaluate(entry):
+    segments = entry.segments
     if entry.task == 'belief_state':
-        if len(entry['keys']) == 0:
+        if len(segments) == 0:
             return
         prediction = entry.prediction
         match = pattern.fullmatch(prediction)
@@ -21,30 +22,42 @@ def evaluate(entry):
             return 0
         bs = {k: v for k, v in [pair for pair in [elem.split(' = ') for elem in match.group('data').split('; ') if elem != ''] if len(pair) == 2]}
         score = 0
-        for key in entry['keys']:
+        for key in segments:
             if key in bs:
-                if bs[key] == entry['keys'][key]:
+                if bs[key] == segments[key]:
                     score += 1
-        score = score / len(entry['keys'])
+        score = score / len(segments)
         return score
     elif entry.task == 'response':
-        if len(entry['keys']) == 0:
+        if len(segments) == 0:
             return
         score = 0
-        for key in entry['keys']:
-            if entry['keys'][key] in entry.prediction:
+        for key in segments:
+            if segments[key] in entry.prediction:
                 score += 1
-        score = score / len(entry['keys'])
+        score = score / len(segments)
         return score
     else:
         raise ValueError(f'Invalid task type: {entry.task}')
 
 def main(args):
-    data = pd.read_json(args.data)
+    data = pd.read_csv(args.data)
+    dataset = pd.read_json(args.dataset)
+
+    dataset = dataset[dataset.columns[2:]]
+    data = pd.concat([data, dataset], axis=1)
+
     out = evaluate(data.iloc, length=len(data))
     out = [(*args, score) for args, score in zip(data.values, out)]
-    df = pd.DataFrame(out, columns=[*data.columns, 'inform_success'])
-    df.to_json('result.json')
+    data = pd.DataFrame(out, columns=[*data.columns, 'inform_success'])
+    data.to_json('result.json')
+    
+    print(f'BLEU: {data.score.sum() / len(data)}')
+    
+    resp = data[(data.task == 'response') & data.inform_success.notnull()]
+    print(f'Success: {resp.inform_success.sum() / len(resp)}')
+    bel = data[(data.task == 'belief_state') & data.inform_success.notnull()]
+    print(f'Inform: {bel.inform_success.sum() / len(bel)}')
 
 def dir_path(path):
     """
@@ -67,12 +80,13 @@ if __name__ == '__main__':
     
     parser.add_argument('--verbose', '-v', dest='verbose', action='store_true')
     parser.add_argument('data', type=file_path, help='Data path (.json)')
+    parser.add_argument('dataset', type=file_path, help='Dataset path the model was evaluated on. The same order is required.')
 
     args = parser.parse_args()
     if args.verbose is True:
         logging.basicConfig(level=logging.INFO)
     start = time.time()
     logging.info('Start.')
-    main(args)
+    out = main(args)
     end = time.time()
     logging.info('Finished. Time: {}'.format(end-start))
