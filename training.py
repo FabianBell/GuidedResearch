@@ -58,7 +58,7 @@ class TrainingModel(pl.LightningModule):
   def training_step(self, batch, batch_nb):
     loss = self.base_step(batch)
     self.log('train_loss', loss)
-    if batch_nb % 1000 == 0 and batch_nb != 0:# and torch.distributed.get_rank() == 0:
+    if batch_nb % 1000 == 0 and batch_nb != 0 and torch.distributed.get_rank() == 0:
         # save in master
         print('Save model')
         torch.save(self.model.state_dict(), 'model.pt')
@@ -85,8 +85,8 @@ def run_training():
   trainer = pl.Trainer(
       max_epochs=epochs,
       check_val_every_n_epoch=check_val_every_n_epoch, 
-      #gpus=-1,
-      #accelerator='ddp',
+      gpus=-1,
+      accelerator='ddp',
       accumulate_grad_batches=optimize_every
       )
   trainer.fit(model)
