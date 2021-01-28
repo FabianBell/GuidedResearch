@@ -110,60 +110,9 @@ class StyleDataset(Dataset):
         assert all([elem >= 0 and elem <= 1 for elem in prefix]), prefix
         corrupted = [CONTEXT_ID] + corrupted
         return sample1, corrupted, sample2, prefix
-
-"""### Dialogue Dataset"""
-
-class DialogueDataset(Dataset):
-
-    def __init__(self, split):
-        self.data = pd.read_pickle(os.path.join(DIALOGUE_PATH, f'{split}.pkl'))[['input', 'target']]
     
-    def __len__(self):
-        return len(self.data)
-
-    def __getitem__(self, idx):
-        entry = self.data.iloc[idx]
-        return entry.input, entry.target
-
-"""### Style Dialogue Dataset"""
-
-class StyleDialogueDataset(Dataset):
-
-    def __init__(self, split, dim=512):
-        self.style_dataset = StyleDataset(split, dim=dim)
-        self.dialogue_dataset = DialogueDataset(split)
-        self.length = max(len(self.style_dataset), len(self.dialogue_dataset))
-        self.dim = dim
-
-    def __len__(self):
-        return self.length
-
-    def __getitem__(self, idx):
-        dialogue = ([], *self.dialogue_dataset[idx % len(self.dialogue_dataset)], [0]*self.dim)
-        style = self.style_dataset[idx % len(self.style_dataset)]
-        return (dialogue, style)
-    
-    def _pad_seq(self, seqs):
-        max_length = max([len(seq) for seq in seqs])
-        padded_seq = [seq + [0]*(max_length - len(seq)) for seq in seqs]
-        return torch.tensor(padded_seq)
-    
-    def _get_attention_mask(self, seq_tensor):
-        mask = (seq_tensor != 0).int()
-        return mask
-
-    def _make_label(self, seq_tensor):
-        seq_tensor[seq_tensor == 0] = -100
-        return seq_tensor
-
     def collate_batch(self, batch):
-        # sample1, corrupted, sample2, prefix
-        dialogue, style = zip(*batch)
-        samples = [[] for _ in range(4)]
-        for elems in [style]: #[dialogue, style]:
-            for i, elem in enumerate(zip(*elems)):
-                samples[i].extend(elem)
-        context, corrupted, target, prefix = samples
+        context, corrupted, target, prefix = zip(*batch)
 
         context = self._pad_seq(context)
         corrupted = self._pad_seq(corrupted) 

@@ -30,7 +30,6 @@ class StyleEncoder(nn.Module):
             input_ids=ids, attention_mask=mask, 
             output_hidden_states=True).last_hidden_state.mean(1)
         return style_vec
-        
 
     def forward(self, input_ids, attention_mask, **inp):
         input_ids = list(input_ids)
@@ -57,14 +56,34 @@ class StyleEncoder(nn.Module):
         encoding.last_hidden_state = torch.cat([prefix[:, None, :], encoding.last_hidden_state], 1)
         return encoding
 
-class DialogueRestyler(nn.Module):
+class TextSETTR(nn.Module):
 
     def __init__(self, apply_back_translation=False):
         super().__init__()
-        self.model = T5ForConditionalGeneration.from_pretrained('t5-small',
+        self.model = T5ForConditionalGeneration.from_pretrained('t5-large',
                                                             return_dict=True)
         self.model.encoder = StyleEncoder(self.model.encoder)
         self.apply_back_translation=apply_back_translation
+
+    def parallelize(self):
+        """
+        Parallelize the model across different devices
+        """
+        device_map = {
+            1 : [0,1,2,3,4,5],
+            2 : [6,7,8,9,10,11,12,13,14],
+            3 : [15,16,17,18,19,20,21,22,23]
+        }
+        self.model.parallelize(device_map=device_map)
+        device_map = {0 : [0,1,2,3,4,5,6,7]}
+        self.model.encoder.parallelize(device_map=device_map)
+    
+    def deparalelize(self):
+        """
+        Collects all model parts and moves them back to the cpu
+        """
+        self.model.deparalelize()
+        self.model.encoder.style_encoder.to('cpu')
 
     def set_style_level(self, level):
         self.model.encoder.style_delta = level
