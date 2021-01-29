@@ -12,7 +12,7 @@ class TrojanHorse:
   
   def __getattr__(self, name):
     return self.elems[0].__getattribute__(name)
-  
+
   def __iter__(self):
     for elem in self.elems:
         yield elem
@@ -24,6 +24,9 @@ class StyleEncoder(nn.Module):
         self.encoder = encoder
         self.style_encoder = deepcopy(encoder)
         self.style_delta = style_delta
+        self.block = self.encoder.block
+        self.device = torch.device('cpu')
+        self.first_device = torch.device('cpu')
 
     def _extract_style(self, ids, mask):
         style_vec = self.style_encoder(
@@ -31,7 +34,16 @@ class StyleEncoder(nn.Module):
             output_hidden_states=True).last_hidden_state.mean(1)
         return style_vec
 
+    def parallelize(self, device_map):
+        return self.encoder.parallelize(device_map)
+
+    def parallelize_style_encoder(self, device_map):
+        self.style_encoder.parallelize(device_map)
+        self.device = torch.device('cuda:0')
+        self.first_device = self.encoder.first_device
+
     def forward(self, input_ids, attention_mask, **inp):
+        attention_mask = attention_mask.to(self.encoder.first_device)
         input_ids = list(input_ids)
         if len(input_ids) == 6:
             target_ids, target_mask, input_ids, prefix, source_ids, source_mask = input_ids
@@ -44,15 +56,14 @@ class StyleEncoder(nn.Module):
             encoding.last_hidden_state += context_vec[:, None, :]
         else:
             context_ids, context_mask, input_ids, prefix = input_ids
-            style_rows = torch.nonzero(input_ids == CONTEXT_ID)[:, 0]
-            if style_rows.shape[0] > 0:
-                context_vec = self._extract_style(context_ids[style_rows], context_mask[style_rows])
-                encoding = self.encoder(input_ids=input_ids, 
-                                        attention_mask=attention_mask[:, 1:], **inp)
-                encoding.last_hidden_state[style_rows] += context_vec[:, None, :]
-            else:
-                encoding = self.encoder(input_ids=input_ids, 
-                                        attention_mask=attention_mask[:, 1:], **inp)
+            context_ids = context_ids.to(self.device)
+            context_mask = context_mask.to(self.device)
+            context_vec = self._extract_style(context_ids, context_mask)
+            input_ids = input_ids.to(self.encoder.first_device)
+            encoding = self.encoder(input_ids=input_ids, 
+                                    attention_mask=attention_mask[:, 1:])
+            encoding.last_hidden_state += context_vec[:, None, :].to(encoding.last_hidden_state.device)
+        prefix = prefix.to(encoding.last_hidden_state.device)
         encoding.last_hidden_state = torch.cat([prefix[:, None, :], encoding.last_hidden_state], 1)
         return encoding
 
@@ -64,6 +75,7 @@ class TextSETTR(nn.Module):
                                                             return_dict=True)
         self.model.encoder = StyleEncoder(self.model.encoder)
         self.apply_back_translation=apply_back_translation
+        self.output_device = torch.device('cpu')
 
     def parallelize(self):
         """
@@ -75,9 +87,13 @@ class TextSETTR(nn.Module):
             3 : [15,16,17,18,19,20,21,22,23]
         }
         self.model.parallelize(device_map=device_map)
-        device_map = {0 : [0,1,2,3,4,5,6,7]}
-        self.model.encoder.parallelize(device_map=device_map)
-    
+        device_map = {
+            0 : [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16],
+            1 : [17,18,19,20,21,22,23]
+        }
+        self.model.encoder.parallelize_style_encoder(device_map)
+        self.output_device = torch.device('cuda:1')
+
     def deparalelize(self):
         """
         Collects all model parts and moves them back to the cpu
@@ -94,8 +110,9 @@ class TextSETTR(nn.Module):
                 self.back_translation(context_ids, context_mask, input_ids, 
                                       input_mask, target, prefix)
         input_ids = (context_ids, context_mask, input_ids, prefix)
+        target = target.to(self.output_device)
         out = self.model(input_ids=input_ids, attention_mask=input_mask, labels=target)
-        return out
+        return out.loss
     
     def generate(self, context_ids, context_mask, input_ids, input_mask, prefix, *args, **kwargs):
       input_ids = TrojanHorse(context_ids, context_mask, input_ids, prefix, *args)

@@ -1,27 +1,46 @@
 import torch
-from tqdm import tqdm
 from torch.utils.data import DataLoader
+from torch.optim import AdamW
+from tqdm import tqdm
 import os
+
+from model import TextSETTR
+from datasets import StyleDataset
+
+class Logger:
+
+    def __init__(self, desc):
+        self.desc = desc
+
+    def __enter__(self):
+        print(f'{self.desc} ...', end='\r')
+        return self
+
+    def __exit__(self, exic_type, exc_value, exc_tb):
+        print(f'{self.desc} [Done]')
 
 batch_size = 8
 lr = 1e-3
-num_epochs = 20
-accumulate_grad = 10
+num_epochs = 16
+accumulate_grad = 20
 save_every = 1000
 
+from time import sleep
+
 def training():
-    model = TextSETTR()
+    with Logger('Initialise model'):
+        model = TextSETTR()
 
-    if os.path.exists('model.pt'):
-        model.load_state_dict(torch.load(f'model.pt'))
-        print('Model loaded')
+        if os.path.exists('model.pt'):
+                model.load_state_dict(torch.load(f'model.pt'))
 
-    model.parallelize()
+        model.parallelize()
 
-    dataset = StyleDataset('train', dim=model.model.config.d_model)
-    dataloader = DataLoader(dataset, batch_size=batch_size,
-        shuffle=True, collate_fn=dataset.collate_batch,
-        num_workers=4, drop_last=True)
+    with Logger('Load data'):
+        dataset = StyleDataset('train', dim=model.model.config.d_model)
+        dataloader = DataLoader(dataset, batch_size=batch_size,
+            shuffle=True, collate_fn=dataset.collate_batch,
+            num_workers=4, drop_last=True)
     
     optimizer = AdamW(model.parameters(), lr=lr)
     optimizer.zero_grad()
@@ -32,9 +51,8 @@ def training():
         for i, batch in enumerate(loader):
             
             # compute forward and backward pass
-            out = model(*batch)
-            loss = out.loss
-            loss.backwards()
+            loss = model(*batch)
+            loss.backward()
             losses.append(loss.item())
 
             if i % accumulate_grad == 0 and i != 0:

@@ -24,11 +24,12 @@ class StyleDataset(Dataset):
                  noises=['drop', 'replace']):
         super().__init__()
         assert noises is None or all([noise in self.NOISES for noise in noises])
-        path = os.path.join(STYLE_PATH, f'{split}.pkl')
-        self.data  = pd.read_pickle(path).Sentences.to_list() 
+        path = os.path.join(STYLE_PATH, f'{split}.json')
+        self.data  = pd.read_json(path).Sentences.to_list() 
         self.dim = dim
         self.range = tuning_range
         self.noises = noises
+        self.tokenizer = T5Tokenizer.from_pretrained('t5-large')
     
     def noise(self, sample):
         prob = np.random.uniform(low=self.range[0], high=self.range[1], size=3)
@@ -47,7 +48,7 @@ class StyleDataset(Dataset):
     
     def replace_noise(self, p, sample):
         samples = random.choice(self.data)
-        sample2 = random.choice(samples)
+        sample2 = self.tokenizer(random.choice(samples)).input_ids
         mask = np.random.rand(len(sample)) < p
         sample = [sample2[idx] if idx < len(sample2) and replace.item() is True else token for idx, (replace, token) in enumerate(zip(mask, sample))]
         return sample
@@ -101,7 +102,7 @@ class StyleDataset(Dataset):
 
     def __getitem__(self, idx):
         sentences = self.data[idx]
-        sample1, sample2 = [elem for elem in random.sample(sentences, k=2)]
+        sample1, sample2 = [self.tokenizer(elem).input_ids for elem in random.sample(sentences, k=2)]
         if self.noises is not None:
           corrupted = self.noise(sample2)
         else:
@@ -110,17 +111,26 @@ class StyleDataset(Dataset):
         assert all([elem >= 0 and elem <= 1 for elem in prefix]), prefix
         corrupted = [CONTEXT_ID] + corrupted
         return sample1, corrupted, sample2, prefix
+
+    def _pad_seq(self, seqs):
+        max_length = max([len(seq) for seq in seqs])
+        padded_seq = [seq + [0]*(max_length - len(seq)) for seq in seqs]
+        return torch.tensor(padded_seq)
     
+    def _get_attention_mask(self, seq_tensor):
+        mask = (seq_tensor != 0).int()
+        return mask
+
     def collate_batch(self, batch):
         context, corrupted, target, prefix = zip(*batch)
 
         context = self._pad_seq(context)
         corrupted = self._pad_seq(corrupted) 
         target = self._pad_seq(target)
-        
+        target[target == 0] = -100
+
         context_mask = self._get_attention_mask(context)
         corrupted_mask = self._get_attention_mask(corrupted)
-        target = self._make_label(target)
         prefix = torch.tensor(prefix)
         # add zeros to corrupted mask for the prefix that is prepended 
         # to the encoder hidden states in the model
