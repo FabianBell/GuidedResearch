@@ -20,7 +20,7 @@ class StyleDataset(Dataset):
 
     NOISES = ['drop', 'replace', 'shuffle']
 
-    def __init__(self, split, dim=512, tuning_range=(0.2, 0.4), 
+    def __init__(self, split, dim=1024, tuning_range=(0.2, 0.4), 
                  noises=['drop', 'replace']):
         super().__init__()
         assert noises is None or all([noise in self.NOISES for noise in noises])

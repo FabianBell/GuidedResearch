@@ -21,14 +21,14 @@ class Agent:
         KB_PREFIX = ' DB: '
         EOKB = '<EOKB>'
         QUERY = 'query'
-        tokenizer = T5Tokenizer.from_pretrained('t5-small',
-            additional_special_tokens=[EOB, BELIEF_PREFIX, EOB, KB_PREFIX, EOKB, '{', '}', 'assistant:', 'user:', '<CTX>', QUERY, *[f'<extra_id_{i}>' for i in range(100)]])
+        tokenizer = T5Tokenizer.from_pretrained('t5-large')
+        #    additional_special_tokens=[EOB, BELIEF_PREFIX, EOB, KB_PREFIX, EOKB, '{', '}', 'assistant:', 'user:', '<CTX>', QUERY, *[f'<extra_id_{i}>' for i in range(100)]])
         return tokenizer
 
     def __init__(self):
-        self.solist = DialogueRestyler()
-        self.solist.load_state_dict(torch.load('solist.pt'))
-        self.textsettr = DialogueRestyler()
+        #self.solist = DialogueRestyler()
+        #self.solist.load_state_dict(torch.load('solist.pt'))
+        self.textsettr = TextSETTR()
         self.textsettr.load_state_dict(torch.load('textsettr.pt'))
         self.tokenizer = self._get_tokenizer()
         self.bs_pattern = re.compile(r'[^{]*{\s\s?(?P<data>[^}]*)\s}(\squery\s{\s(?P<query>.*)\s})?\s<EOB>\s*')
@@ -77,7 +77,7 @@ class Agent:
         beliefe_state = self.tokenizer.decode(pred[0])
         return beliefe_state
 
-    def _get_modified_response(self, response, source, target):
+    def get_modified_response(self, response, source, target):
         print('S:', source)
         print('T:', target)
         input_ids = torch.tensor([[self.CONTEXT_ID] + self.tokenizer(response).input_ids])
@@ -88,7 +88,7 @@ class Agent:
             target_mask,
             input_ids,
             torch.ones(input_ids.shape[0], input_ids.shape[1] + 1, dtype=torch.long),
-            torch.tensor([[0.2, 0.4, 0.2, 0.4] + [0.]* 508]),
+            torch.tensor([[0.2, 0.4, 0.2, 0.4] + [0.]* 1020]),
             source_ids,
             source_mask,
             max_length=512
@@ -147,8 +147,8 @@ class Agent:
             print('Response:', response)
             source += ' ' + response
             history += ' assistant: ' + response
-            response = self._get_modified_response(response, source, target)
+            response = self.get_modified_response(response, source, target)
             self.write_out(response)
 
 agent = Agent()
-agent()
+#agent()

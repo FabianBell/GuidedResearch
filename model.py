@@ -19,7 +19,7 @@ class TrojanHorse:
 
 class StyleEncoder(nn.Module):
 
-    def __init__(self, encoder, style_delta=2):
+    def __init__(self, encoder, style_delta=6):
         super().__init__()
         self.encoder = encoder
         self.style_encoder = deepcopy(encoder)
@@ -27,6 +27,7 @@ class StyleEncoder(nn.Module):
         self.block = self.encoder.block
         self.device = torch.device('cpu')
         self.first_device = torch.device('cpu')
+        self.encoder.first_device = torch.device('cpu')
 
     def _extract_style(self, ids, mask):
         style_vec = self.style_encoder(

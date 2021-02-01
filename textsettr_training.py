@@ -19,9 +19,9 @@ class Logger:
     def __exit__(self, exic_type, exc_value, exc_tb):
         print(f'{self.desc} [Done]')
 
-batch_size = 8
+batch_size = 6
 lr = 1e-3
-num_epochs = 16
+num_epochs = 20
 accumulate_grad = 20
 save_every = 1000
 
@@ -51,7 +51,11 @@ def training():
         for i, batch in enumerate(loader):
             
             # compute forward and backward pass
-            loss = model(*batch)
+            try:
+                loss = model(*batch)
+            except RuntimeError:
+                print('Batch skiped due to OOM')
+                continue
             loss.backward()
             losses.append(loss.item())
 
