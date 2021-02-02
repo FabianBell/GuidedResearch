@@ -19,7 +19,7 @@ class TrojanHorse:
 
 class StyleEncoder(nn.Module):
 
-    def __init__(self, encoder, style_delta=6):
+    def __init__(self, encoder, style_delta=8):
         super().__init__()
         self.encoder = encoder
         self.style_encoder = deepcopy(encoder)

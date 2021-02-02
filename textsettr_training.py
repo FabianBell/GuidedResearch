@@ -20,10 +20,10 @@ class Logger:
         print(f'{self.desc} [Done]')
 
 batch_size = 6
-lr = 1e-3
 num_epochs = 20
 accumulate_grad = 20
 save_every = 1000
+lr = 1e-3 / accumulate_grad
 
 from time import sleep
 
