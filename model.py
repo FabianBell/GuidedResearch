@@ -3,8 +3,6 @@ import torch.nn as nn
 from transformers import T5ForConditionalGeneration
 from copy import deepcopy
 
-from datasets import CONTEXT_ID 
-
 class TrojanHorse:
   
   def __init__(self, *elems):

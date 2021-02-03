@@ -9,8 +9,6 @@ from model import *
 
 class Agent:
     
-    CONTEXT_ID = 32109
-
     OKAY = '\033[92m'
     ERROR = '\033[91m'
     END = '\033[0m'
@@ -21,8 +19,8 @@ class Agent:
         KB_PREFIX = ' DB: '
         EOKB = '<EOKB>'
         QUERY = 'query'
-        tokenizer = T5Tokenizer.from_pretrained('t5-large')
-        #    additional_special_tokens=[EOB, BELIEF_PREFIX, EOB, KB_PREFIX, EOKB, '{', '}', 'assistant:', 'user:', '<CTX>', QUERY, *[f'<extra_id_{i}>' for i in range(100)]])
+        tokenizer = T5Tokenizer.from_pretrained('t5-large',
+            additional_special_tokens=[EOB, BELIEF_PREFIX, EOB, KB_PREFIX, EOKB, '{', '}', 'assistant:', 'user:', '<CTX>', QUERY, *[f'<extra_id_{i}>' for i in range(100)]])
         return tokenizer
 
     def __init__(self):
@@ -80,7 +78,7 @@ class Agent:
     def get_modified_response(self, response, source, target):
         print('S:', source)
         print('T:', target)
-        input_ids = torch.tensor([[self.CONTEXT_ID] + self.tokenizer(response).input_ids])
+        input_ids = self.tokenizer(response, return_tensors='pt').input_ids
         source_ids, source_mask = self.tokenizer(source, return_tensors='pt').values()
         target_ids, target_mask = self.tokenizer(target, return_tensors='pt').values()
         pred = self.textsettr.generate(

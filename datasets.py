@@ -11,8 +11,6 @@ import torch
 STYLE_PATH = 'review_data'
 DIALOGUE_PATH = 'dialogue_dataset'
 
-CONTEXT_ID = 32109
-
 class StyleDataset(Dataset):
     """
     Dataset for style based setence reconstruction
@@ -109,7 +107,7 @@ class StyleDataset(Dataset):
           corrupted = sample2
         prefix = self._get_hidden_state_prefix(sample2, corrupted)
         assert all([elem >= 0 and elem <= 1 for elem in prefix]), prefix
-        corrupted = [CONTEXT_ID] + corrupted
+        corrupted = corrupted
         return sample1, corrupted, sample2, prefix
 
     def _pad_seq(self, seqs):
