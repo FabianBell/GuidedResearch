@@ -41,7 +41,7 @@
 \maketitle
 
 \begin{abstract}
-In this work we present a combination of end-to-end goal oriented dialogue generation with style adaptive response generation. We show that a style extractor like TextSETTR \cite{riley2020textsettr} and be fused with a end-to-end dialogue generator like Soloist \cite{peng2020soloist} in order to build a dialogue agent that is able to adapt the users writing style.  
+\textbf{TODO}
 \end{abstract}
 
 \section{Introduction}
@@ -67,7 +67,7 @@ Training these units can be quite labour intensive. All units have to be trained
 \end{figure*}
 Due to recent progress in sequence-to-sequence (seq2seq) models \cite{radford2019language, raffel2019exploring} recent work tries to fuse the NLU, dialogue management and NLG units into one seq2seq model like in \cite{peng2020soloist}.  
 \section{Theory}
-In this section we introduce the different approaches. \textbf{TODO}
+In this section we introduce the different approaches. We will briefly describe the methods the approaches use as well as the different training tasks. 
 \subsection{Soloist}The \textit{Soloist}\cite{peng2020soloist} approach fuses the different units into two seq2seq steps that are executed sequentially as shown in \autoref{fig:soloist}. In the first step, the previous dialogue history is used to predict the next belief state. The belief state is then parsed and transformed into a suitable format for the given knowledge base. The response of the knowledge base is then concatenated with the dialogue history and the belief state. The concatenation is fed into the model again in order to predict the next system response.\\
 The Authors introduced three different training tasks:
 \begin{enumerate}
@@ -79,6 +79,7 @@ The response generation is again a seq2seq task and uses the same criterion than
 Beside optimising the similarity of the predicted and the ground truth sequences it is an essential part of the agent to place the correct information in the respective slots in the belief state or response. The authors therefore suggests a task that tried to enhance the awareness of the model towards incorrect target sequences. For that we sample normal target sequences from our dataset and we sample corrupted target sequences where the key information (eg. theatre location, movie name) is replaced by a random key information from the dataset. Based on the samples we apply a binary classification given the output of the models encoder to predict if the sequence is corrupted or not. The loss is calculated by the binary cross entropy loss. 
 \end{enumerate}
 \subsection{Soloist Modifications}
+\label{sec:soloist_mod}
 \begin{figure*}[!h]
 \centering
 \includegraphics[width=0.8\textwidth]{figures/Soloist_Data.png}
@@ -89,21 +90,57 @@ Due to resource limitations we decided to scale down the model described in \cit
 Additionally, we modified the \textit{Belief State Prediction} task by adding an additional query word to the target sequence. The query word is used to properly transform the belief state to a format that can be used to query data from the knowledge base. An example of modified format is shown in \autoref{fig:soloistdata}. 
 
 \section{Experimental Setup}
-In this section we describe the different training setups. \textbf{TODO} 
+In this section we describe the different training setups. This includes the datasets and hyperparameters that are used, as well as the used hardware.
 \subsection{Soloist Setup}
-The dataset that is used in \cite{peng2020soloist} they use the MultiWOZ dataset \cite{budzianowski2020multiwoz}. The MultiWOZ dataset is a multi domain dialogue dataset. Due to resource limitations and due to the smaller model that is used in this work we decided to only select one domain for training and validation. The selected domain from the MultiWOZ dataset is the \textit{Movie Ticket} domain, where the system has to guide the used through the ordering process. 
+\begin{figure}[!h]
+\centering
+\begin{tabular}{c|c|c}
+\hline
+\textbf{Statistic} & \textbf{Taskmaster} & \textbf{MultiWOZ}\\
+\hline
+\# unique words & 21,894 & 19,175 \\
+\hline
+\# unique names entities & 8,218 & 1,338 \\
+\hline
+Perplexity & 17.08 & 15.62 \\
+\hline
+BLEU & 6.53 & 11.02\\
+\hline
+\end{tabular}
+\caption{Dataset comparison from \cite{byrne2019taskmaster}.}
+\label{fig:taskmaster}
+\end{figure}
+The dataset that is used in \cite{peng2020soloist} is the MultiWOZ dataset \cite{budzianowski2020multiwoz}. The MultiWOZ dataset is a multi domain dialogue dataset consisting of 6 different domains. Similar to the MultiWOZ dataset \cite{byrne2019taskmaster} introduced the Taskmaster dataset. As stated by the authors the Taskmaster dataset has a richer and more diverse language than the MultiWOZ dataset as shown in \autoref{fig:taskmaster}. Due to resource limitations and due to the smaller model that is used in this work we decided to only select one domain for training and validation. Since the Taskmaster is more rich as the MultiWOZ dataset and the dataset is more easy to process we decided to train on a subdomain of the Taskmaster dataset. The selected domain from the Taskmaster dataset is the \textit{Movie Ticket} domain, where the system has to guide the user through the ordering process. 
 
-The model was trained with free available resources provided by Google Colab\footnote{\url{https://colab.research.google.com/}}.
+The model was trained with free available resources provided by Google Colab\footnote{\url{https://colab.research.google.com/}}. We used the hyper parameters provided by \cite{peng2020soloist} and trained for 10 epochs. 
 \section{Results}
-
-
+In this section we present the results of the experiments that are introduced in the previous section. 
+\subsection{Soloist Result}
+\begin{figure*}[!h]
+\centering
+\begin{tabular}{c|c|c|c|c|c|c}
+\hline
+\textbf{Model} & \textbf{\# Parameters} & \textbf{Dataset} & \textbf{Inform} & \textbf{Success} & \textbf{BLEU} & \textbf{Combined}\\
+\hline
+SOLOIST(large) & 117M & MultiWOZ(full) & 85.50 & 72.90 & 16.54 & 102.49 \\
+\hline
+SOLOIST(small) & 60M & Taskmaster(Movie Tickets) & 84.24 & 67.30 & 60.79 & 136.56\\
+\hline
+\end{tabular}
+\caption{Results of the Soloist experiment. The models are not evaluated on the same dataset nor on the same domain but on the same overall tasks. Thus the models cannot be compared directly. }
+\label{fig:solosit_res}
+\end{figure*}
+Due to our resource limitations we could not follow \cite{peng2020soloist} directly but we had to reduce the approach to a smaller model on a smaller domain as described in \autoref{sec:soloist_mod}. Thereby the results stated in \autoref{fig:solosit_res} cannot be compared directly. 
+We follow the automatic evaluation as in \cite{peng2020soloist, budzianowski2020multiwoz}. The \textit{inform rate} measures if the model predicts a correct entity. A entity is a combination of a slot (e.g. location) and a slot value (e.g. Munich). The \textit{success rate} measures if the system provides all the requested information. The combined score is computed as $Combined = (Inform + Success) \times 0.5 + BLEU$.
+Due to the smaller domain the model performs better on the \textit{BLEU} score, however, performs worse on the \textit{Inform} and \textit{Success} score. Because of the higher \textit{BLEU} score the \textit{Combined} score is higher as well. 
+The high \textit{BLEU} score can be explained by the significantly smaller vocabulary domain in which the small model has to perform. As described in \autoref{sec:soloist_mod} we tried to counteract this problem by choosing a more rich dataset with a lower BLEU score.  
 \section{Conclusions}
-
+We have shown that the \textit{Soloist} model performs well with a significantly smaller setting on a single domain dataset.   
 
 \section*{Acknowledgements}
 
 
-\bibliographystyle{IEEEtran}
+\bibliographystyle{apalike}
 \bibliography{literature}
 
 \end{document}
