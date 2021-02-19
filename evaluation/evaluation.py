@@ -28,6 +28,8 @@ data = []
 for inp, target, _ in tqdm(dataset, desc='Evaluate'):
     inp_ids = tokenizer(inp, return_tensors='pt').input_ids
     pred = model.generate(inp_ids, max_length=512)
+    pred = pred[:, 1:]
+    pred = pred[:, :-1]
     out = tokenizer.decode(pred[0])
     hypothesis = out.split(' ')
     reference = target.split(' ')

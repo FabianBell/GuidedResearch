@@ -5,40 +5,55 @@ import argparse
 import time
 
 import pandas as pd
-from bellparallel import parallel
+from tqdm import tqdm
 import re
 
 pattern = re.compile(r'[^{]*{\s\s?(?P<data>[^}]*)\s}(\squery\s{\s(?P<query>.*)\s})?\s<EOB>\s*')
 
-@parallel(tag='Evaluate')
-def evaluate(entry):
-    segments = entry.segments
-    if entry.task == 'belief_state':
-        if len(segments) == 0:
-            return
-        prediction = entry.prediction
-        match = pattern.fullmatch(prediction)
-        if match is None:
-            return 0
-        bs = {k: v for k, v in [pair for pair in [elem.split(' = ') for elem in match.group('data').split('; ') if elem != ''] if len(pair) == 2]}
-        score = 0
-        for key in segments:
-            if key in bs:
-                if bs[key] == segments[key]:
+def evaluate(data):
+    prev_responses = None
+    resp_inp = None
+    for entry in tqdm(data.iloc, total=len(data), desc='Evaluate'):
+        segments = entry.segments
+        if entry.task == 'belief_state':
+            if len(segments) == 0:
+                yield
+                continue
+            prediction = entry.prediction
+            if not isinstance(prediction, str):
+                yield 0
+                continue
+            match = pattern.fullmatch(prediction)
+            if match is None:
+                yield 0
+                continue
+            bs = {k: v for k, v in [pair for pair in [elem.split(' = ') for elem in match.group('data').split('; ') if elem != ''] if len(pair) == 2]}
+            score = 0
+            for key in segments:
+                if key in bs:
+                    if bs[key] == segments[key]:
+                        score += 1
+            score = score / len(segments)
+            yield score
+        elif entry.task == 'response':
+            sub_seq = entry.input.split(' =>')[0]
+            assert (resp_inp is None) == (prev_responses is None)
+            if resp_inp is None or sub_seq not in resp_inp:
+               prev_responses = entry.prediction
+            else:
+                prev_responses += entry.prediction
+            resp_inp = sub_seq
+            if len(segments) == 0:
+                yield
+                continue
+            score = 0
+            for key in segments:
+                if segments[key] in prev_responses:
                     score += 1
-        score = score / len(segments)
-        return score
-    elif entry.task == 'response':
-        if len(segments) == 0:
-            return
-        score = 0
-        for key in segments:
-            if segments[key] in entry.prediction:
-                score += 1
-        score = score / len(segments)
-        return score
-    else:
-        raise ValueError(f'Invalid task type: {entry.task}')
+            score = score / len(segments)
+            yield score
+        else:
+            raise ValueError(f'Invalid task type: {entry.task}')
 
 def main(args):
     data = pd.read_csv(args.data)
@@ -46,8 +61,7 @@ def main(args):
 
     dataset = dataset[dataset.columns[2:]]
     data = pd.concat([data, dataset], axis=1)
-
-    out = evaluate(data.iloc, length=len(data))
+    out = evaluate(data)
     out = [(*args, score) for args, score in zip(data.values, out)]
     data = pd.DataFrame(out, columns=[*data.columns, 'inform_success'])
     data.to_json('result.json')
