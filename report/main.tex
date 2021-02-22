@@ -93,7 +93,10 @@ In \cite{riley2020textsettr} they use two types of corruption methods:
 \begin{enumerate}
 \item \textbf{Noise}:\\
 This methods corrupts input by dropping random tokens or by replacing tokens by a random token by a token from the dataset. For replacing the $k$-th token in sentence $s_1$, a different sentence $s_2$ is sampled from the dataset. The token is then replaced by the $k$-th token in sentences $s_2$. A sentences is first corrupted by dropping tokens and then by replacing tokens. For each sentence a noise probability $p$ is sampled from a uniform distribution in the range $20-40\%$. A token is then dropped/replaced by the probability $p$ independently but sequential.
+\item \textbf{Back translation}:\\
+For applying back translation on sentence $s_1$ a sentence $s_2$ from the dataset is sampled where $s_1$ and $s_2$ do not have the same style. The model is then applied on $s_1$ with $s_2$ as the reference sentence. The resulting sentence is then taken as corrupted sequence of $s_1$. 
 \end{enumerate}
+An additional idea of \cite{riley2020textsettr} approach is to control how eager the model replaces or adapts token in the translation process. Therefore they prepend the input sequence embeddings with the vector $(a_1, a_2, d_1, d_1, 0, \dots, 0)$ of length $d\_model$, where $d\_model$ is the embedding dimension. $(a_1, a_2)$ and $(d_1, d_2)$ represent the range of \textit{added} and \textit{deleted} tokens, respectively. The true value of added and deleted tokens lies within these ranges and the range as well as the center of the ranges is sampled randomly.
 \section{Experimental Setup}
 In this section we describe the different training setups. This includes the datasets and hyperparameters that are used, as well as the used hardware.
 \subsection{Soloist Setup}
