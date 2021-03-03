@@ -36,7 +36,7 @@
 \maketitle
 
 \begin{abstract}
-In this work we evaluate the usage of SOLOIST in combination of TextSETTR or DGST in order to modify the style of the dialogue agents response. We show that the SOLOIST yields reasonable performance in a significantly smaller setup. Further, we show that the TextSETTR performance cannot be reproduced on the Fine-Food dataset, not merged with SOLOIST, not independent in a smaller setup, nor as the original approach. Additionally, we show that the LSTM-DGST performance cannot be reproduced either given the Donald Trump twitter dataset. We release our code as well as the pre trained reduced SOLOIST model. 
+In this work we evaluate the usage of Soloist in combination of TextSETTR or DGST in order to modify the style of the dialogue agents response. We show that the Soloist yields reasonable performance in a significantly smaller setup. Further, we show that the TextSETTR performance cannot be reproduced on the Fine-Food dataset, not merged with Soloist, not independent in a smaller setup, nor as the original approach. Additionally, we show that the LSTM-DGST performance cannot be reproduced either given the Donald Trump twitter dataset. We release our code as well as the pre trained reduced Soloist model. 
 \end{abstract}
 
 \section{Introduction}
@@ -59,10 +59,10 @@ Training these units can be quite labour intensive. All units have to be trained
 \label{fig:soloist}
 \end{figure*}
 Due to recent progress in sequence-to-sequence (seq2seq) models \cite{radford2019language, raffel2019exploring} current work tries to fuse the NLU, dialogue management and NLG units into one seq2seq model like in \cite{peng2020soloist}. \\
-In this work we will evaluate state-of-the-art models like SOLOIST, TextSETTR and DGST in a smaller, more commonly usable setup. Further, we will evaluate two combined models from the SOLOIST and TextSETTR models. We will evaluate 
+In this work we will evaluate state-of-the-art models like Soloist, TextSETTR and DGST in a smaller, more commonly usable setup. Further, we will evaluate two combined models from the Soloist and TextSETTR models. We will evaluate 
 \begin{enumerate}
 \item Merged Soloist and TextSETTR
-\item SOLOIST and TextSETTR with shared weights
+\item Soloist and TextSETTR with shared weights
 \end{enumerate}
 \section{Theory}
 In this section we introduce the different approaches. We will briefly describe the methods the approaches use as well as the different training tasks. 
@@ -106,17 +106,17 @@ An additional idea of \cite{riley2020textsettr} approach is to control how eager
 \label{fig:textsettr}
 \end{figure*}
 In case of inference following \cite{riley2020textsettr} the input sentence is not corrupted but perceived to be corrupted by a different style like in the back translation corruption method. The computation of the style vector differers from the computation of the style vector in the training case. Let $f$ be the style encoding, $s_1$ the input sentence, $s_2$ a sentences from the target style and $s_3$ sentence form the same style as $s_1$, then the style vector $v$ is computed as $v = f(s_1) + (f(s_2) - f(s_3))$. Since the input is not actually corrupted the \textit{add} and \textit{delete} rates are both set to $20\%-40\%$. A visualisation of the model in training and inference mode is shown in \autoref{fig:textsettr}.
-\subsection{Small TextSETTR}
-Since the Model described by \cite{riley2020textsettr} results in a model with 1 billion parameters it very hard to train and requires an enormous amount of hardware resources for training as well for production. Similar to the modified Soloist as described in \autoref{sec:soloist_mod} we can reduce the model from T5-large to T5-small for the decoder and both encoder in the TextSETTR approach. This results in a model with \textbf{TODO} parameter, which is significantly easier to work with.  
+\subsection{Small TextSETTR}\label{sec:textsettr_small}
+Since the Model described by \cite{riley2020textsettr} results in a model with 1 billion parameters it very hard to train and requires an enormous amount of hardware resources for training as well for production. Similar to the modified Soloist as described in \autoref{sec:soloist_mod} we can reduce the model from T5-large to T5-small for the decoder and both encoder in the TextSETTR approach. This results in a model with \textbf{TODO} parameter, which is significantly easier to work with. 
 \subsection{Soloist and TextSETTR as merged models}
-In our first and computationally least expensive variation we tried to merge the Soloist and TextSETTR by letting the decoder and the main encoder be shared between both models. The main encoder in the TextSETTR model is the encoder that processes the corrupted sentence but not the style extractor (see \autoref{fig:textsettr}). As described in \autoref{sec:soloist_mod} instead of using the GPT-2 model we took the T5-small model, which is used here as well, even for the style encoder. The resulting model has \textbf{TODO} parameters. We train the model by concatenating the list of tasks from both approaches. The loss of both approaches is weighted equally in our final loss function. Let $l_1$, $l_2$ and $l_3$ be the losses from the SOLOIST tasks described in \autoref{sec:soloist} and let $l_4$ and $l_5$ be the tasksed derived by the corruption methods described in \autoref{sec:textsettr}, then our final loss is computed as:
+In an alternative computationally less expensive variation we try to merge the Soloist and TextSETTR by letting the decoder and the main encoder be shared between both models. The main encoder in the TextSETTR model is the encoder that processes the corrupted sentence but not the style extractor (see \autoref{fig:textsettr}). Analogue to \autoref{sec:soloist_mod} and \autoref{sec:textsettr_small} instead of using the GPT-2 model or T5-large, respectively, we take the T5-small model. The resulting model has \textbf{TODO} parameters. We train the model by concatenating the list of tasks from both approaches. The loss of both approaches is weighted equally in our final loss function. Let $l_1$, $l_2$ and $l_3$ be the losses from the Soloist tasks described in \autoref{sec:soloist} and let $l_4$ and $l_5$ be the tasksed derived by the corruption methods described in \autoref{sec:textsettr}, then our final loss is computed as:
 $$
 loss = \frac{1}{3}(l_1 + l_2 + l_3) + \frac{1}{2} (l_4 + l_5)
 $$
 Since every task is a seq2seq task we can compute all task together in one batch. However, the TextSETTR approach prepends the embedding dimension with vector $v$ that indicates the corruption range of the sentence as described in \autoref{sec:textsettr}. Therefore, we have to prepend the embeddings of the Soloist tasks sentences as well to make the batch a valid tensor again. To avoid that the prepended vector is accounted in the soloist tasks we want to set the attention masks accordingly as described in \cite{vaswani2017attention}. The classifier used for the soloist task "\textit{Contrastive Objective}" as described in \autoref{sec:soloist} is not used by the TextSETTR part.
 \section{Experimental Setup}
 In this section we describe the different training setups. This includes the datasets and hyperparameters that are used, as well as the used hardware.
-\subsection{Soloist Setup}
+\subsection{Soloist Setup}\label{sec:soloist_setup}
 \begin{figure}[!h]
 \centering
 \begin{tabular}{c|c|c}
@@ -137,9 +137,15 @@ BLEU & 6.53 & 11.02\\
 \end{figure}
 Similar to the MultiWOZ dataset \cite{byrne2019taskmaster} introduced the Taskmaster dataset. As stated by the authors the Taskmaster dataset has a richer and more diverse language than the MultiWOZ dataset as shown in \autoref{fig:taskmaster}. Due to resource limitations and due to the smaller model that is used in this work we decided to only select one domain for training and validation. Since the Taskmaster is more rich as the MultiWOZ dataset and the dataset is more easy to process we decided to train on a subdomain of the Taskmaster dataset. The selected domain from the Taskmaster dataset is the \textit{Movie Ticket} domain, where the system has to guide the user through the ordering process. 
 
-The model was trained with free available resources provided by Google Colab\footnote{\url{https://colab.research.google.com/}}. We used the hyper parameters provided by \cite{peng2020soloist} and trained for 10 epochs. 
+The model was trained with free available resources provided by Google Colab\footnote{\url{https://colab.research.google.com/}}. Specifically, we trained on a Tesla T4\footnote{https://www.nvidia.com/de-de/data-center/tesla-t4/}, which, at the time of writing, is the most commonly assigned GPU at google colab. We used the hyper parameters provided by \cite{peng2020soloist} and trained until convergence. Since the authors do not report a learning rate but refer to \cite{kingma2014adam}, we assume they choose the default setting which is $1e-3$. 
+\subsection{Small TextSETTR setup}\label{sec:textsetter_small_setup}
+When working with only limited resources, an additional problem that occurs when following \cite{riley2020textsettr} is working with the dataset proposed by the authors. The dataset that is used in the TextSETTR approach is the "\textit{Amazon Review Dataset}" \cite{ni2019justifying}. This dataset consists of 233.1 million reviews, which requires 34 GB of storage space. Even though \cite{riley2020textsettr} discards single line reviews the remaining data is still difficult to work with. Analogue to \autoref{sec:soloist_setup} we reduce the data to only specific domain. Therefore, we train the model on the "\textit{Fine Food Dataset}" \cite{mcauley2013amateurs} with $500.000$ amazon reviews from the food domain. We use the hyper parameters provided by \cite{riley2020textsettr}. Since, we cannot fit the required batch size of $65,536$ tokens on the given GPU we apply the accumulated gradient method accordingly. 
+\subsection{Merged Soloist-TextSETTR setup}\label{sec:soloist_textsettr_setup}
+Analogue to \autoref{sec:textsetter_small_setup} and \autoref{sec:soloist_setup} we use the reduced datasets "\textit{Taskmaster}" and "\textit{Fine Food}". We choose a batch size of $65,536$ according to the TextSETTR approach (with accumulated gradients), a learning rate of $1e-3$ and we train for $100$k steps, which is the maximum number of steps from both approaches. We train on a Tesla K80\footnote{\url{https://www.nvidia.com/de-de/data-center/tesla-k80/}}.
+\subsection{TextSETTR Setup}
+Training the original TextSETTR cannot be reproduced with publicly available resources like those provided by google colab, due to the enormous amount of 1 billion parameters. The model does not fit in the GPU RAM of the GPUs provided by google colab (at the time of writing). Therefore, we distribute and compute the model layers on multiple devices in order to fit the partial model as well as the data that is produced during computation into the GPUs RAM. We train on 4 Tesla K80 and use the parameters provided by \cite{riley2020textsettr} with accumulated gradients. Again, we use the reduced "Fine-Food" dataset. 
 \section{Results}
-In this section we present the results of the experiments that are introduced in the previous section. 
+In this section we present the results of the experiments that are introduced in the previous section.  
 \subsection{Soloist Result}
 \begin{figure*}[!h]
 \centering
@@ -147,9 +153,9 @@ In this section we present the results of the experiments that are introduced in
 \hline
 \textbf{Model} & \textbf{\# Parameters} & \textbf{Dataset} & \textbf{Inform} & \textbf{Success} & \textbf{BLEU} & \textbf{Combined}\\
 \hline
-SOLOIST(large) & 117M & MultiWOZ(full) & 85.50 & 72.90 & 16.54 & 102.49 \\
+Soloist(large) & 117M & MultiWOZ(full) & 85.50 & 72.90 & 16.54 & 102.49 \\
 \hline
-SOLOIST(small) & 60M & Taskmaster(Movie Tickets) & 84.24 & 67.30 & 60.79 & 136.56\\
+Soloist(small) & 60M & Taskmaster(Movie Tickets) & 84.24 & 67.30 & 60.79 & 136.56\\
 \hline
 \end{tabular}
 \caption{Results of the Soloist experiment. The models are not evaluated on the same dataset nor on the same domain but on the same overall tasks. Thus the models cannot be compared directly. }
