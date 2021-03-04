@@ -46,10 +46,10 @@ class ModelOutput:
 
 class DGSTPair(nn.Module):
 
-    def __init__(self, vocab_size=28996, vocab_min=106):
+    def __init__(self, vocab_size=32100, vocab_min=4):
         super().__init__()
-        self.t0 = T5ForConditionalGeneration.from_pretrained('t5-small')
-        self.t1 = T5ForConditionalGeneration.from_pretrained('t5-small')
+        self.t0 = T5ForConditionalGeneration.from_pretrained('t5-small', return_dict=True)
+        self.t1 = T5ForConditionalGeneration.from_pretrained('t5-small', return_dict=True)
         self.vocab_size = vocab_size
         self.vocab_min = vocab_min
     

@@ -1,7 +1,7 @@
 import pandas as pd
 import random
 from torch.utils.data import Dataset
-from transformers import BertTokenizerFast
+from transformers import T5Tokenizer
 import numpy as np
 from collections import Counter
 import os
@@ -23,9 +23,9 @@ class TrumpDataset(Dataset):
             self.trump = [line for line in dfile.read().splitlines() if len(line) < 512]
         with open(os.path.join(RESPONSE_PATH, f'{split}.txt'), 'r') as dfile:
             self.response = [line for line in dfile.read().splitlines() if len(line) < 512]
-        self.tokenizer = BertTokenizerFast.from_pretrained('bert-base-cased')
-        self.vocab_size = 28996 
-        self.vocab_min = 106
+        self.tokenizer = T5Tokenizer.from_pretrained('t5-small')
+        self.vocab_size = self.tokenizer.vocab_size
+        self.vocab_min = 4
 
     def __len__(self):
         return max(len(self.trump), len(self.response))
