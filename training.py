@@ -85,8 +85,8 @@ def run_training():
     model.model.load_state_dict(torch.load(f'model.pt'))
   trainer = pl.Trainer(
       max_epochs=epochs,
-      gpus=-1,
-      accelerator='ddp',
+      #gpus=-1,
+      #accelerator='ddp',
       accumulate_grad_batches=optimize_every,
       gradient_clip_val=1
       )
