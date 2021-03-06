@@ -73,7 +73,7 @@ def run_training():
   name = 'Styler' #@param {type: "string"}
   lr = 1e-3 #@param
   optimize_every = 8#@param
-  batch_size=32 #@param
+  batch_size=16 #@param
   patience=0 #@param
   epochs = 100 #@param
   model_con = DGSTPair
