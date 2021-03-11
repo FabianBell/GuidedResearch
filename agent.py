@@ -1,4 +1,4 @@
-from transformers import T5Tokenizer, logging, BertTokenizerFast
+from transformers import T5Tokenizer, logging, T5ForConditionalGeneration
 logging.set_verbosity_error()
 import re
 import torch
@@ -6,7 +6,6 @@ import pandas as pd
 import random
 
 from model import *
-from DGST import DGST_LSTM as DGST
 
 class Agent:
     
@@ -29,10 +28,10 @@ class Agent:
     def __init__(self):
         self.solist = DialogueRestyler()
         self.solist.load_state_dict(torch.load('solist.pt'))
-        self.dgst = DGST()
+        self.dgst = T5ForConditionalGeneration.from_pretrained('t5-small')
         self.dgst.load_state_dict(torch.load('dgst.pt'))
         self.tokenizer = self._get_tokenizer()
-        self.dgst_tokenizer = BertTokenizerFast.from_pretrained('bert-base-cased')
+        self.dgst_tokenizer = T5Tokenizer.from_pretrained('t5-small')
         self.bs_pattern = re.compile(r'[^{]*{\s\s?(?P<data>[^}]*)\s}(\squery\s{\s(?P<query>.*)\s})?\s<EOB>\s*')
         self.argument_pattern = re.compile(r':set\s(?P<arg>\w*)=(?P<argv>\w*)')
         self.kb = pd.read_pickle('kb.pkl')
@@ -76,15 +75,13 @@ class Agent:
             torch.zeros(1, 512),
             max_length=512
         )
-        beliefe_state = self.tokenizer.decode(pred[0])
+        beliefe_state = self.tokenizer.decode(pred[0][1:-1])
         return beliefe_state
 
     def _get_modified_response(self, response):
-        tokens = self.dgst_tokenizer(response, return_tensors='pt').input_ids
-        pred = self.dgst(tokens, length=100)
-        pred = pred[0].argmax(-1)
-        pred = pred[pred >= 106]
-        response = self.dgst_tokenizer.decode(pred)
+        inp = self.dgst_tokenizer(response, return_tensors='pt')
+        pred = self.dgst.generate(**inp)
+        response = self.dgst_tokenizer.decode(pred[0][1:-1])
         return response
 
     def write_okay(self, seq):
