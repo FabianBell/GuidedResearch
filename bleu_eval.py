@@ -12,7 +12,7 @@ config = T5Config.from_pretrained('t5-small')
 model = T5ForConditionalGeneration(config)
 model.load_state_dict(torch.load('dgst.pt'))
 
-with open('donald_trump/test.txt', 'r') as dfile:
+with open('response_dataset/test.txt', 'r') as dfile:
     data = dfile.read()
 
 data = [(tokenizer(line, return_tensors='pt').input_ids, line) for line in tqdm(data.splitlines(), desc='Preprocessing')]
