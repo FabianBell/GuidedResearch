@@ -29,4 +29,4 @@ for entry_tokens, entry in tqdm(data, desc='Run predictions'):
     result.append((entry, predict, score))
 
 data = pd.DataFrame(result, columns=['sentence', 'prediction', 'score'])
-data.to_csv('eval.csv', index=False)
+data.to_csv('dgst_eval.csv', index=False)
