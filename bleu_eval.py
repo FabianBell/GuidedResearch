@@ -21,7 +21,7 @@ data = [(tokens, line) for tokens, line in data if len(tokens) <= 512]
 result = []
 
 for entry_tokens, entry in tqdm(data, desc='Run predictions'):
-    predict_tokens = model.generate(entry_tokens)
+    predict_tokens = model.generate(entry_tokens, max_length=512)
     predict = tokenizer.decode(predict_tokens[0], skip_special_tokens=True)
     reference = entry.split(' ')
     hypothesis = predict.split(' ')
