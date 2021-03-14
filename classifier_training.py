@@ -13,7 +13,7 @@ class ClassifierTrainingModel(pl.LightningModule):
 
     def __init__(self, batch_size, patience):
         super().__init__()
-        self.model = DistilBertForSequenceClassification.from_pretrained('distilbert-base-cased', return_dict=True, num_labels=2) 
+        self.model = DistilBertForSequenceClassification.from_pretrained('distilbert-base-cased', return_dict=True, num_labels=1) 
         self.batch_size = batch_size
         self.patience = patience
 
@@ -23,7 +23,7 @@ class ClassifierTrainingModel(pl.LightningModule):
 
     def get_loader(self, split, shuffle):
         dataset = ClassifierDataset(split)
-        dataloader = DataLoader(dataset, batch_size=self.batch_size, shuffle=shuffle, collate_fn=dataset.collate_batch, num_workers=4)
+        dataloader = DataLoader(dataset, batch_size=self.batch_size, shuffle=shuffle, collate_fn=dataset.collate_batch, num_workers=2)
         return dataloader
 
     def train_dataloader(self):
@@ -59,17 +59,17 @@ class ClassifierTrainingModel(pl.LightningModule):
     def validation_epoch_end(self, outputs):
         logits = torch.cat([elem['logits'] for elem in outputs], 0)
         labels = torch.cat([elem['labels'] for elem in outputs], 0)
-        pred = logits.softmax(-1).argmax(-1)
+        pred = (logits.sigmoid() < 0.5).int().view(-1)
         acc = (pred == labels).sum() / len(pred)
-        micro_f1 = f1(pred, labels, 2, average='micro')
-        macro_f1 = f1(pred, labels, 2, average='macro')
+        micro_f1 = f1(pred, labels, 1, average='micro')
+        macro_f1 = f1(pred, labels, 1, average='macro')
         self.log('val_acc', acc, prog_bar=True)
         self.log('micro_f1', micro_f1)
         self.log('macro_f1', macro_f1)
 
 
 def run_training():
-    batch_size = 42
+    batch_size = 2
     patience = 2
     model = ClassifierTrainingModel(batch_size, patience)
     checkpoint_callback = ModelCheckpoint(

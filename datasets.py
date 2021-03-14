@@ -35,7 +35,7 @@ class ClassifierDataset(Dataset):
         trump, response = zip(*batch)
         batch = trump + response
         model_inp = self.tokenizer(list(batch), padding=True, return_tensors='pt')
-        labels = torch.tensor([0] * len(trump) + [1] * len(response))
+        labels = torch.tensor([0] * len(trump) + [1] * len(response), dtype=torch.float)
         return {**model_inp, 'labels' : labels}
 
 class TrumpDataset(Dataset):
