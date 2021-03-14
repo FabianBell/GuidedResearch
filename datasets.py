@@ -1,7 +1,7 @@
 import pandas as pd
 import random
 from torch.utils.data import Dataset
-from transformers import T5Tokenizer
+from transformers import T5Tokenizer, DistilBertTokenizerFast
 import numpy as np
 from collections import Counter
 import os
@@ -15,7 +15,7 @@ RESPONSE_PATH = 'response_dataset'
 
 CONTEXT_ID = 32109
 
-class TrumpDataset(Dataset):
+class ClassifierDataset(Dataset):
 
     def __init__(self, split):
         # use string length as an approximation of the token sequence length
@@ -23,7 +23,33 @@ class TrumpDataset(Dataset):
             self.trump = [line for line in dfile.read().splitlines() if len(line) < 512]
         with open(os.path.join(RESPONSE_PATH, f'{split}.txt'), 'r') as dfile:
             self.response = [line for line in dfile.read().splitlines() if len(line) < 512]
-        self.tokenizer = T5Tokenizer.from_pretrained('t5-small')
+        self.tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-cased')
+
+    def __len__(self):
+        return max(len(self.trump), len(self.response))
+
+    def __getitem__(self, idx):
+        return self.trump[idx % len(self.trump)], self.response[idx % len(self.response)]
+    
+    def collate_batch(self, batch):
+        trump, response = zip(*batch)
+        batch = trump + response
+        model_inp = self.tokenizer(list(batch), padding=True, return_tensors='pt')
+        labels = torch.tensor([0] * len(trump) + [1] * len(response))
+        return {**model_inp, 'labels' : labels}
+
+class TrumpDataset(Dataset):
+
+    def __init__(self, split, tokenizer=None):
+        # use string length as an approximation of the token sequence length
+        with open(os.path.join(DONALD_TRUMP, f'{split}.txt'), 'r') as dfile:
+            self.trump = [line for line in dfile.read().splitlines() if len(line) < 512]
+        with open(os.path.join(RESPONSE_PATH, f'{split}.txt'), 'r') as dfile:
+            self.response = [line for line in dfile.read().splitlines() if len(line) < 512]
+        if tokenizer is None:
+            self.tokenizer = T5Tokenizer.from_pretrained('t5-small')
+        else:
+            selt.tokenizer = tokenizer
         self.vocab_size = self.tokenizer.vocab_size
         self.vocab_min = 4
 
