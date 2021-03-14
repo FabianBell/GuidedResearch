@@ -69,7 +69,7 @@ class ClassifierTrainingModel(pl.LightningModule):
 
 
 def run_training():
-    batch_size = 2
+    batch_size = 42
     patience = 2
     model = ClassifierTrainingModel(batch_size, patience)
     checkpoint_callback = ModelCheckpoint(
