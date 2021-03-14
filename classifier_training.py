@@ -80,7 +80,8 @@ def run_training():
     )
     trainer = pl.Trainer(
         max_epochs=50,
-        callbacks=[checkpoint_callback]
+        callbacks=[checkpoint_callback],
+        gpus=1
     )
     trainer.fit(model)
 
