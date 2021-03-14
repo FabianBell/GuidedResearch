@@ -5,7 +5,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
-from pytorch_lightning.metrics.functional import f1
+from pytorch_lightning.metrics.functional import f1, accuracy
 from transformers import DistilBertForSequenceClassification, DistilBertTokenizerFast
 from datasets import ClassifierDataset
 
@@ -13,10 +13,10 @@ class ClassifierTrainingModel(pl.LightningModule):
 
     def __init__(self, batch_size, patience):
         super().__init__()
-        self.model = DistilBertForSequenceClassification.from_pretrained('distilbert-base-cased', return_dict=True, num_labels=1) 
+        self.model = DistilBertForSequenceClassification.from_pretrained('distilbert-base-cased', return_dict=True, num_labels=2) 
         self.batch_size = batch_size
         self.patience = patience
-
+        
     def forward(self, *args, **kwargs):
         out = self.model(*args, **kwargs)
         return out
@@ -59,10 +59,10 @@ class ClassifierTrainingModel(pl.LightningModule):
     def validation_epoch_end(self, outputs):
         logits = torch.cat([elem['logits'] for elem in outputs], 0)
         labels = torch.cat([elem['labels'] for elem in outputs], 0)
-        pred = (logits.sigmoid() < 0.5).int().view(-1)
-        acc = (pred == labels).sum() / len(pred)
-        micro_f1 = f1(pred, labels, 1, average='micro')
-        macro_f1 = f1(pred, labels, 1, average='macro')
+        pred = logits.softmax(-1).argmax(-1)
+        acc = accuracy(pred, labels)
+        micro_f1 = f1(pred, labels, 2, average='micro')
+        macro_f1 = f1(pred, labels, 2, average='macro')
         self.log('val_acc', acc, prog_bar=True)
         self.log('micro_f1', micro_f1)
         self.log('macro_f1', macro_f1)
@@ -81,6 +81,7 @@ def run_training():
     trainer = pl.Trainer(
         max_epochs=50,
         callbacks=[checkpoint_callback],
+        #overfit_batches=1
         gpus=1
     )
     trainer.fit(model)
