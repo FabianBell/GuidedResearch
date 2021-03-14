@@ -20,8 +20,14 @@ data = [(tokens, line) for tokens, line in data if len(tokens) <= 512]
 
 result = []
 
+device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+cpu = torch.device('cpu')
+model.to(device)
+
 for entry_tokens, entry in tqdm(data, desc='Run predictions'):
+    entry_tokens = entry_tokens.to(device)
     predict_tokens = model.generate(entry_tokens, max_length=512)
+    predict_tokens = predict_tokens.to(cpu)
     predict = tokenizer.decode(predict_tokens[0], skip_special_tokens=True)
     reference = entry.split(' ')
     hypothesis = predict.split(' ')
