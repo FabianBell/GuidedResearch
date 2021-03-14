@@ -39,7 +39,7 @@
 In this work we evaluate the usage of Soloist in combination of TextSETTR or DGST in order to modify the style of the dialogue agents response. We show that the Soloist yields reasonable performance in a significantly smaller setup. Further, we show that the TextSETTR performance cannot be reproduced on the Fine-Food dataset, not merged with Soloist, not independent in a smaller setup, nor as the original approach. Additionally, we show that the LSTM-DGST performance cannot be reproduced either given the Donald Trump twitter dataset. We release our code as well as the pre trained reduced Soloist model. 
 \end{abstract}
 
-\section{Introduction}
+\section{Introduction}\label{sec:intro}
 
 Dialogue systems (e.g. Chat-bots) have made great progress during the last years, mainly due to the invention of novel neural models and machine learning techniques. Because of the progress, current research aims to improve the dialogue systems on an individual and human-like level. Recent articles \cite{DBLP:journals/corr/abs-1901-08149, liu2020impress} tried to tackle this problem by feeding a persona into the network. The network is then trained to extract characteristic information from the given persona in order to generate a human-like output sequence. The persona is defined by a set of profile sentences like "\textit{I like books}". The problem of these approaches consist of two tasks:
 \begin{itemize}
@@ -114,7 +114,13 @@ $$
 loss = \frac{1}{3}(l_1 + l_2 + l_3) + \frac{1}{2} (l_4 + l_5)
 $$
 Since every task is a seq2seq task we can compute all task together in one batch. However, the TextSETTR approach prepends the embedding dimension with vector $v$ that indicates the corruption range of the sentence as described in \autoref{sec:textsettr}. Therefore, we have to prepend the embeddings of the Soloist tasks sentences as well to make the batch a valid tensor again. To avoid that the prepended vector is accounted in the soloist tasks we want to set the attention masks accordingly as described in \cite{vaswani2017attention}. The classifier used for the soloist task "\textit{Contrastive Objective}" as described in \autoref{sec:soloist} is not used by the TextSETTR part.
-\section{Experimental Setup}
+\subsection{DGST}
+As mentioned in \autoref{sec:intro} an alternative approach is the DGST model \cite{li2020dgst}. This approach is limited to the style transfer between two given styles and cannot be changed after training. The DGST approach is again based on a noisy reconstruction task. Let $S_1$ and $S_2$ be two different styles, then DGST uses two different seq2seq models $g_1$ and $g_2$, in order to transfer a text between the different styles as $g_1: S_1 \rightarrow S_2$ and $g_2: S_2 \rightarrow S_1$. Both generators are trained jointly. As a corruption method the authors define the set $U(y, \gamma)$, which is the set with all modifications of $y$ with noise intensity $\gamma$. The noise intensity is the mean of a folded normal distribution $\mathcal{F}$. The authors construct $U(y, \gamma)$ by sampling $m$ from $\mathcal{F}$ and add all sentences $y'$ to $U(y, \gamma)$ with $m$ modifications. A modification here means either a replacement, a deletion or an insert of a token. Let $n$ be the described noise function and let $x, y$ be text from the styles $S_1$ and $S_2$, respectively, then $g_1$ is trained by optimising 
+$$
+\mathcal{L}_{g_1} = \mathcal{L}(x, g_1(n(x), \Theta_1)) + \mathcal{L}(x, g_1(n(g_2(x, \Theta_2)), \Theta_1))\textnormal{.}
+$$
+The loss function $\mathcal{L}$ computes the cross entropy loss of the generated sequences. When training $g_1$ we do not update the parameters $\Theta_2$. The $g_2$ is trained analogously.The final loss is the sum of $\mathcal{L}_{g_1}$ and $\mathcal{L}_{g_2}$.
+\section{Experimental Setup}\label{sec:experiment_setup}
 In this section we describe the different training setups. This includes the datasets and hyperparameters that are used, as well as the used hardware.
 \subsection{Soloist Setup}\label{sec:soloist_setup}
 \begin{figure}[!h]
@@ -144,6 +150,8 @@ When working with only limited resources, an additional problem that occurs when
 Analogue to \autoref{sec:textsetter_small_setup} and \autoref{sec:soloist_setup} we use the reduced datasets "\textit{Taskmaster}" and "\textit{Fine Food}". We choose a batch size of $65,536$ according to the TextSETTR approach (with accumulated gradients), a learning rate of $1e-3$ and we train for $100$k steps, which is the maximum number of steps from both approaches. We train on a Tesla K80\footnote{\url{https://www.nvidia.com/de-de/data-center/tesla-k80/}}.
 \subsection{TextSETTR Setup}
 Training the original TextSETTR cannot be reproduced with publicly available resources like those provided by google colab, due to the enormous amount of 1 billion parameters. The model does not fit in the GPU RAM of the GPUs provided by google colab (at the time of writing). Therefore, we distribute and compute the model layers on multiple devices in order to fit the partial model as well as the data that is produced during computation into the GPUs RAM. We train on 4 Tesla K80 and use the parameters provided by \cite{riley2020textsettr} with accumulated gradients. Again, we use the reduced "Fine-Food" dataset. 
+\subsection{DGST Setup}
+The DGST setup allows any seq2seq model as the respective generators. Since the reported results in \cite{li2020dgst} are based on a 4-layer BiLSTM we adapted the model choice in our experiments. Despite what is written in \cite{li2020dgst} the code\footnote{\url{https://github.com/lissomx/DGST/blob/30438e24a3c6b2abe8ceeda214863fcf79cf379f/Exp\_DGST.py\#L104}} published by the authors show a different implementation of the corruption method. They restrict the token modifications for $U(y, \gamma)$ to replacement operations only. We adapt this in our experiment. The results published in \cite{li2020dgst} are based on the Yelp\cite{li2018delete}. The Yelp dataset task is based on sentiment swapping. As described in \autoref{sec:intro}, we are more interested in modifying the writing style rather than changing the content of a utterance. Therefore, we use the messages from the twitter account of Donald Trump as our training data. We use the data published by thetrumparchive\footnote{\url{https://www.thetrumparchive.com/}}. We use the hyper parameters provided by the authors and again train on a Tesla T4 gpu. Analogue to \cite{li2020dgst} we train until convergence and reduce $\gamma$ from $0.3$ to $0.03$. After that we repeat the training until convergence.     
 \section{Results}
 In this section we present the results of the experiments that are introduced in the previous section.  
 \subsection{Soloist Result}
@@ -165,9 +173,16 @@ Due to our resource limitations we could not follow \cite{peng2020soloist} direc
 We follow the automatic evaluation as in \cite{peng2020soloist, budzianowski2020multiwoz}. The \textit{inform rate} measures if the model predicts a correct entity. An entity is a combination of a slot (e.g. location) and a slot value (e.g. Munich). The \textit{success rate} measures if the system provides all the requested information. The combined score is computed as $Combined = (Inform + Success) \times 0.5 + BLEU$.
 Due to the smaller domain the model performs better on the \textit{BLEU} score, however, performs worse on the \textit{Inform} and \textit{Success} score. Because of the higher \textit{BLEU} score the \textit{Combined} score is higher as well. 
 The high \textit{BLEU} score can be explained by the significantly smaller vocabulary domain in which the small model has to perform. As described in \autoref{sec:soloist_mod} we tried to counteract this problem by choosing a more rich dataset with a lower BLEU score.  
+\section{TextSETTR Results}
+\textbf{TODO}
+\section{DGST}
+\textbf{TODO}
 \section{Conclusions}
-We have shown that the \textit{Soloist} model performs well with a significantly smaller setting on a single domain dataset.   
+We have shown that the \textit{Soloist} model performs well with a significantly smaller setting on a single domain dataset. In many industry use cases the dialogue task is more limited to a very specific language domain as well as to a very specific task domain. For these use cases we have shown that the development cost as well as the production costs can be reduced by using a smaller version of the Soloist model and still achieve reasonable performance. Additionally, we have shown that the TextSETTR model with the configurations described in \autoref{sec:experiment_setup} cannot be used with the "Fine-Food" dataset in order to achieve a proper style modification. The same holds for the DGST approach on the Donald Trump dataset.
+\section{Future Work}
+In future work one might focus on a style transfer models that require significantly smaller setup. This would open up the usage of style transfer for research with limited resources as well for many industry applications where a resources consumption of models like TextSETTR might not be feasible.
 \section*{Acknowledgements}
+We want to thank Pyoneer\footnote{\url{https://www.pyoneer.io/}} for providing us with additional resources to try out the TextSETTR approach. 
 \bibliographystyle{apalike}
 \bibliography{literature}
 \end{document}
