@@ -17,14 +17,20 @@ class TrojanHorse:
 
 class StyleEncoder(nn.Module):
 
-    def __init__(self, encoder, style_delta=8):
+    def __init__(self, encoder, style_delta=8, on_single_gpu=None):
         super().__init__()
         self.encoder = encoder
         self.style_encoder = deepcopy(encoder)
         self.style_delta = style_delta
-        self.device = torch.device('cpu')
-        self.first_device = torch.device('cpu')
-        self.encoder.first_device = torch.device('cpu')
+        if on_single_gpu is None:
+            self.device = torch.device('cpu')
+            self.first_device = torch.device('cpu')
+            self.encoder.first_device = torch.device('cpu')
+        else:
+            self.device = on_single_gpu
+            self.first_device = on_single_gpu
+            self.encoder.first_device = on_single_gpu
+            
 
     def _extract_style(self, ids, mask):
         style_vec = self.style_encoder(
@@ -67,11 +73,11 @@ class StyleEncoder(nn.Module):
 
 class TextSETTR(nn.Module):
 
-    def __init__(self, apply_back_translation=False):
+    def __init__(self, apply_back_translation=False, on_single_gpu=None):
         super().__init__()
         self.model = T5ForConditionalGeneration.from_pretrained('t5-large',
                                                             return_dict=True)
-        self.model.encoder = StyleEncoder(self.model.encoder)
+        self.model.encoder = StyleEncoder(self.model.encoder, on_single_gpu=on_single_gpu)
         self.apply_back_translation=apply_back_translation
         self.output_device = torch.device('cpu')
 
