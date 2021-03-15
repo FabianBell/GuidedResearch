@@ -22,8 +22,8 @@ cpu = torch.device('cpu')
 model.to(device)
 
 for sent_tokens, pred_tokens, sent, pred, score in tqdm(data, desc='Run predictions'):
-    sent_class = model(sent_tokens.to(device)).logits[0].softmax(0).argmax().to(cpu)
-    pred_class = model(pred_tokens.to(device)).logits[0].softmax(0).argmax().to(cpu) if pred_tokens is not None else None
+    sent_class = model(sent_tokens.to(device)).logits[0].softmax(0).argmax().to(cpu).item()
+    pred_class = model(pred_tokens.to(device)).logits[0].softmax(0).argmax().to(cpu).item() if pred_tokens is not None else None
     result.append((sent, pred, sent_class, pred_class, score))
 
 data = pd.DataFrame(result, columns=['sentence', 'prediction', 'sentence_class', 'prediction_class', 'score'])
