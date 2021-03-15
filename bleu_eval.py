@@ -35,18 +35,22 @@ inp_pipeline = map(lambda inp: (*random.choice(ref_data), *inp), data)
 
 result = []
 
+device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+cpu = torch.device('cpu')
+textsettr.to(device)
+
 for ref_tokens, ref, entry_tokens, entry in tqdm(inp_pipeline, total=len(data), desc='Run predictions'):
     predict_tokens = textsettr.generate(
-        ref_tokens,
-        torch.ones(*ref_tokens.shape, dtype=torch.long),
-        entry_tokens,
-        torch.ones(entry_tokens.shape[0], entry_tokens.shape[1] + 1, dtype=torch.long),
-        torch.tensor([[0.2, 0.4, 0.2, 0.4] + [0.]* 1020]),
-        entry_tokens,
-        torch.ones(*entry_tokens.shape, dtype=torch.long),
+        ref_tokens.to(device),
+        torch.ones(*ref_tokens.shape, dtype=torch.long, device=device),
+        entry_tokens.to(device),
+        torch.ones(entry_tokens.shape[0], entry_tokens.shape[1] + 1, dtype=torch.long, device=device),
+        torch.tensor([[0.2, 0.4, 0.2, 0.4] + [0.]* 1020], device=device),
+        entry_tokens.to(device),
+        torch.ones(*entry_tokens.shape, dtype=torch.long, device=device),
         max_length=512
     )
-    predict = tokenizer.decode(predict_tokens[0], skip_special_tokens=True)
+    predict = tokenizer.decode(predict_tokens[0].to(cpu), skip_special_tokens=True)
     reference = entry.split(' ')
     hypothesis = predict.split(' ')
     score = sentence_bleu([reference], hypothesis)
