@@ -36,7 +36,7 @@ class ClassifierTrainingModel(pl.LightningModule):
         return self.get_loader('test', False)
 
     def configure_optimizers(self):
-        optimizer = AdamW(self.parameters())
+        optimizer = AdamW(self.parameters(), lr=2.65e-5, weight_decay=4e-3)
         scheduler = ReduceLROnPlateau(optimizer, patience=self.patience)
         return {
             'optimizer' : optimizer,
@@ -81,7 +81,6 @@ def run_training():
     trainer = pl.Trainer(
         max_epochs=50,
         callbacks=[checkpoint_callback],
-        #overfit_batches=1
         gpus=1
     )
     trainer.fit(model)
