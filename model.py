@@ -22,7 +22,6 @@ class StyleEncoder(nn.Module):
         self.encoder = encoder
         self.style_encoder = deepcopy(encoder)
         self.style_delta = style_delta
-        self.block = self.encoder.block
         self.device = torch.device('cpu')
         self.first_device = torch.device('cpu')
         self.encoder.first_device = torch.device('cpu')
@@ -70,7 +69,7 @@ class TextSETTR(nn.Module):
 
     def __init__(self, apply_back_translation=False):
         super().__init__()
-        self.model = T5ForConditionalGeneration.from_pretrained('t5-large',
+        self.model = T5ForConditionalGeneration.from_pretrained('t5-small',
                                                             return_dict=True)
         self.model.encoder = StyleEncoder(self.model.encoder)
         self.apply_back_translation=apply_back_translation
