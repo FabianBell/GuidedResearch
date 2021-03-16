@@ -75,7 +75,7 @@ class TextSETTR(nn.Module):
 
     def __init__(self, apply_back_translation=False, on_single_gpu=None):
         super().__init__()
-        self.model = T5ForConditionalGeneration.from_pretrained('t5-large',
+        self.model = T5ForConditionalGeneration.from_pretrained('t5-small',
                                                             return_dict=True)
         self.model.encoder = StyleEncoder(self.model.encoder, on_single_gpu=on_single_gpu)
         self.apply_back_translation=apply_back_translation
