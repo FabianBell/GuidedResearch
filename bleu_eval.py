@@ -9,6 +9,9 @@ from tqdm import tqdm
 import random
 from model import TextSETTR
 
+device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+cpu = torch.device('cpu')
+
 EOB = '<EOB>'
 BELIEF_PREFIX = ' => Belief State : Movie Tickets { '
 KB_PREFIX = ' DB: '
@@ -16,7 +19,7 @@ EOKB = '<EOKB>'
 QUERY = 'query'
 tokenizer = T5Tokenizer.from_pretrained('t5-large',
     additional_special_tokens=[EOB, BELIEF_PREFIX, EOB, KB_PREFIX, EOKB, '{', '}', 'assistant:', 'user:', '<CTX>', QUERY, *[f'<extra_id_{i}>' for i in range(100)]])
-textsettr = TextSETTR()
+textsettr = TextSETTR(on_single_gpu=device)
 textsettr.load_state_dict(torch.load('textsettr.pt'))
 
 with open('response_dataset/test.txt', 'r') as dfile:
@@ -35,8 +38,6 @@ inp_pipeline = map(lambda inp: (*random.choice(ref_data), *inp), data)
 
 result = []
 
-device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-cpu = torch.device('cpu')
 textsettr.to(device)
 
 for ref_tokens, ref, entry_tokens, entry in tqdm(inp_pipeline, total=len(data), desc='Run predictions'):
