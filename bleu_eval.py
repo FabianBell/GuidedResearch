@@ -34,7 +34,7 @@ class EvalDataset(Dataset):
         self.ref_data = self._preprocess(ref_data, 'Preprocessing 2/2')
     
     def __len__(self):
-        return 10 #len(self.data)
+        return len(self.data)
 
     def __getitem__(self, idx):
         return (*self.data[idx], *random.choice(self.ref_data))
@@ -58,7 +58,7 @@ textsettr.load_state_dict(torch.load('textsettr.pt'))
 textsettr.to(device)
 
 dataset = EvalDataset()
-dataloader = DataLoader(dataset, batch_size=10, collate_fn=dataset.collate_batch, num_workers=2)
+dataloader = DataLoader(dataset, batch_size=40, collate_fn=dataset.collate_batch, num_workers=2)
 
 result = []
 
@@ -77,7 +77,7 @@ for ref_tokens, ref, entry_tokens, entry in tqdm(dataloader, desc='Run predictio
         torch.ones(*entry_tokens.shape, dtype=torch.long, device=device),
         max_length=512
     )
-    predictions = tokenizer.batch_decode(predict_tokens.to(cpu), skip_special_tokens=True)
+    predictions = dataset.tokenizer.batch_decode(predict_tokens.to(cpu), skip_special_tokens=True)
     for i, predict in enumerate(predictions):
         reference = entry[i].split(' ')
         hypothesis = predict.split(' ')
