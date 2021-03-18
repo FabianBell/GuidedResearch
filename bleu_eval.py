@@ -47,8 +47,10 @@ class EvalDataset(Dataset):
     def collate_batch(self, batch):
         entry, line, ref_entry, ref_line = zip(*batch)
         tokens = self._make_tensor(entry)
+        mask = (tokens != 0).int()
         ref_tokens = self._make_tensor(ref_entry)
-        return tokens, line, ref_tokens, ref_line
+        ref_mask = (ref_tokens != 0).int()
+        return tokens, mask, line, ref_tokens, ref_mask, ref_line
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 cpu = torch.device('cpu')
@@ -63,18 +65,19 @@ dataloader = DataLoader(dataset, batch_size=40, collate_fn=dataset.collate_batch
 result = []
 
 
-for entry_tokens, entry, ref_tokens, ref in tqdm(dataloader, desc='Run predictions'):
+for entry_tokens, entry_mask, entry, ref_tokens, ref_mask, ref in tqdm(dataloader, desc='Run predictions'):
     prefix = torch.zeros(ref_tokens.shape[0], 512, device=device)
     prefix[:, [0,2]] = 0.2
     prefix[:, [1,3]] = 0.4
+    mask_prefix = torch.ones(512, 1)
     predict_tokens = textsettr.generate(
         ref_tokens.to(device),
-        torch.ones(*ref_tokens.shape, dtype=torch.long, device=device),
+        ref_mask.to(device),
         entry_tokens.to(device),
-        torch.ones(entry_tokens.shape[0], entry_tokens.shape[1] + 1, dtype=torch.long, device=device),
+        torch.cat([mask_prefix, entry_mask], -1, device=device),
         prefix,
         entry_tokens.to(device),
-        torch.ones(*entry_tokens.shape, dtype=torch.long, device=device),
+        entry_mask.to(device),
         max_length=512
     )
     predictions = dataset.tokenizer.batch_decode(predict_tokens.to(cpu), skip_special_tokens=True)
