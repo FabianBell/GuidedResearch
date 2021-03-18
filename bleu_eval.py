@@ -69,12 +69,12 @@ for entry_tokens, entry_mask, entry, ref_tokens, ref_mask, ref in tqdm(dataloade
     prefix = torch.zeros(ref_tokens.shape[0], 512, device=device)
     prefix[:, [0,2]] = 0.2
     prefix[:, [1,3]] = 0.4
-    mask_prefix = torch.ones(512, 1)
+    mask_prefix = torch.ones(entry_mask.shape[0], 1)
     predict_tokens = textsettr.generate(
         ref_tokens.to(device),
         ref_mask.to(device),
         entry_tokens.to(device),
-        torch.cat([mask_prefix, entry_mask], -1, device=device),
+        torch.cat([mask_prefix, entry_mask], -1).to(device),
         prefix,
         entry_tokens.to(device),
         entry_mask.to(device),
