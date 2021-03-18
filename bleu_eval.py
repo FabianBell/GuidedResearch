@@ -63,7 +63,7 @@ dataloader = DataLoader(dataset, batch_size=40, collate_fn=dataset.collate_batch
 result = []
 
 
-for ref_tokens, ref, entry_tokens, entry in tqdm(dataloader, desc='Run predictions'):
+for entry_tokens, entry, ref_tokens, ref in tqdm(dataloader, desc='Run predictions'):
     prefix = torch.zeros(ref_tokens.shape[0], 512, device=device)
     prefix[:, [0,2]] = 0.2
     prefix[:, [1,3]] = 0.4
