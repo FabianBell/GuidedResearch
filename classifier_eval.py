@@ -11,9 +11,10 @@ config = DistilBertConfig.from_pretrained('distilbert-base-cased', return_dict=T
 model = DistilBertForSequenceClassification(config)
 model.load_state_dict(torch.load('classifier.pt'))
 
-data = pd.read_csv('dgst_eval.csv')
+data = pd.read_csv('eval_textsettr_small_lambda2.csv')
+arg_names = data.columns[:-3]
 data = [data.iloc[i].tolist() for i in range(len(data))]
-data = [(tokenizer(sent, return_tensors='pt').input_ids, tokenizer(pred, return_tensors='pt').input_ids if isinstance(pred, str) else None, sent, pred, score) for sent, pred, score in tqdm(data, desc='Preprocessing')]
+data = [(*args, tokenizer(sent, return_tensors='pt').input_ids, tokenizer(pred, return_tensors='pt').input_ids if isinstance(pred, str) else None, sent, pred, score) for *args, sent, pred, score in tqdm(data, desc='Preprocessing')]
 
 result = []
 
@@ -21,10 +22,10 @@ device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 cpu = torch.device('cpu')
 model.to(device)
 
-for sent_tokens, pred_tokens, sent, pred, score in tqdm(data, desc='Run predictions'):
+for *args, sent_tokens, pred_tokens, sent, pred, score in tqdm(data, desc='Run predictions'):
     sent_class = model(sent_tokens.to(device)).logits[0].softmax(0).argmax().to(cpu).item()
     pred_class = model(pred_tokens.to(device)).logits[0].softmax(0).argmax().to(cpu).item() if pred_tokens is not None else None
-    result.append((sent, pred, sent_class, pred_class, score))
+    result.append((*args, sent, pred, sent_class, pred_class, score))
 
-data = pd.DataFrame(result, columns=['sentence', 'prediction', 'sentence_class', 'prediction_class', 'score'])
-data.to_csv('dgst_full_eval.csv', index=False)
+data = pd.DataFrame(result, columns=[*arg_names, 'sentence', 'prediction', 'sentence_class', 'prediction_class', 'score'])
+data.to_csv('full_eval_textsettr_small_lambda2.csv', index=False)
