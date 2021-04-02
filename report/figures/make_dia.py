@@ -18,14 +18,14 @@ right.set_ylabel('Classifier score')
 plt.xticks(style_lambda)
 left.set_xlabel('Style lambda')
 
-left.plot(style_lambda, small_textsettr_bleu, color='g', marker='x', label='Small TextSETTR (BELU)')
-right.plot(style_lambda, small_textsettr_pred, color='r', marker='x', label='Small TextSETTR (Classifier)')
+left.plot(style_lambda, small_textsettr_bleu, color='green', marker='x', label='Small TextSETTR (BELU)')
+right.plot(style_lambda, small_textsettr_pred, color='lime', marker='x', label='Small TextSETTR (Classifier)')
 
-left.plot(style_lambda, textsettr_bleu, color='b', marker='x', label='TextSETTR (BELU)')
-right.plot(style_lambda, textsettr_pred, color='y', marker='x', label='TextSETTR (Classifier)')
+left.plot(style_lambda, textsettr_bleu, color='deepskyblue', marker='x', label='TextSETTR (BELU)')
+right.plot(style_lambda, textsettr_pred, color='skyblue', marker='x', label='TextSETTR (Classifier)')
 
-left.plot(style_lambda, merged_textsettr_bleu, color='m', marker='x', label='Merged TextSETTR (BELU)')
-right.plot(style_lambda, merged_textsettr_pred, color='c', marker='x', label='Merged TextSETTR (Classifier)')
+left.plot(style_lambda, merged_textsettr_bleu, color='darkred', marker='x', label='Merged TextSETTR (BELU)')
+right.plot(style_lambda, merged_textsettr_pred, color='red', marker='x', label='Merged TextSETTR (Classifier)')
 
 left.legend(loc='lower left', bbox_to_anchor=(0, 1.02, 1, 0.2))
 right.legend(loc='lower right', bbox_to_anchor=(0, 1.02, 1, 0.2))
