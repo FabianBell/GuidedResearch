@@ -1,7 +1,7 @@
 # Guided Research - Modifying the Writing Style in Goal-Oriented Dialog Generation
 
 ## Master
-This branch contains the report as well as the first tries regarding the textsettr and soloist approach.
+This branch contains the report as well as the proposal.
 ## Soloist
 This branch contains the code for the individual Soloist approach. Based on this code the reported reseults were generated.
 ## Textsettr
